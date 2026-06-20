@@ -1,0 +1,45 @@
+import mongoose, { Document } from "mongoose";
+import { IMonitor } from "../types/monitor.types";
+
+export interface IMonitorDocument extends IMonitor, Document {}
+
+const monitorSchema = new mongoose.Schema<IMonitorDocument>(
+  {
+    name: {
+      type: String,
+      required: [true, "Monitor name is required"],
+      trim: true,
+    },
+    url: {
+      type: String,
+      required: [true, "Monitor url is required"],
+      trim: true
+    },
+    method: { type: String, 
+      enum:["GET","POST","PUT","DELETE","PATCH"],
+      default: "GET",
+      uppercase: true,
+   },
+    interval: { type: Number, default: 5, min:[1,"Interval must be at least 1 minute"]},
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    status:{
+      type:String,
+      enum:["UP","DOWN","UNKNOWN"],
+      default:"UNKNOWN"
+    },
+    lastCheckedAt:{
+      type:Date
+    },
+    lastResponseTime:{
+      type:Number,
+      default:0
+    }
+  },
+  { timestamps: true },
+);
+
+export default mongoose.model<IMonitorDocument>("Monitor", monitorSchema);
