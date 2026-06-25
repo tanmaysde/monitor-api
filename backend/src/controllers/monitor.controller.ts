@@ -49,7 +49,7 @@ export const updateMonitor = async (req: AuthRequest, res: Response) => {
     const monitor = await Monitor.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
       req.body,
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
     if (!monitor) {
       return res.status(404).json({ message: "Monitor not found" });

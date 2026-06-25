@@ -1,10 +1,9 @@
 import { Types } from "mongoose";
 import Event from "../models/Event";
-import { runWorkflowsForEvent } from "./workflow.service";
 import { EventType } from "../types/event.types";
+import { runWorkflowsForEvent } from "./workflow.service";
 
-
-type MonitorStatus = "UP" | "DOWN" | "UNKNOWN" ;
+type MonitorStatus = "UP" | "DOWN" | "UNKNOWN";
 
 type CheckResult = {
   status: "UP" | "DOWN";
@@ -22,27 +21,26 @@ type CreateMonitorEventsInput = {
 
 const SLOW_RESPONSE_THRESHOLD = 1000;
 
-export const createMonitorEvents = async({
+export const createMonitorEvents = async ({
   monitorId,
   userId,
   monitorName,
   previousStatus,
   result,
-} : CreateMonitorEventsInput) =>{
-
+}: CreateMonitorEventsInput) => {
   const events = [];
 
-  if (previousStatus !== "DOWN" && result.status === "DOWN"){
+  if (previousStatus !== "DOWN" && result.status === "DOWN") {
     events.push({
       monitorId,
       userId,
-      type:"API_DOWN",
+      type: "API_DOWN",
       message: `${monitorName} is down`,
       previousStatus,
-      currentStatus:result.status,
-      responseTime:result.responseTime,
-      triggeredAt:result.checkedAt,
-    })
+      currentStatus: result.status,
+      responseTime: result.responseTime,
+      triggeredAt: result.checkedAt,
+    });
   }
 
   if (previousStatus === "DOWN" && result.status === "UP") {
@@ -75,7 +73,6 @@ export const createMonitorEvents = async({
     return [];
   }
 
-  // return Event.insertMany(events);
   const createdEvents = await Event.insertMany(events);
 
   for (const event of createdEvents) {
@@ -83,9 +80,11 @@ export const createMonitorEvents = async({
       eventId: event._id as Types.ObjectId,
       monitorId: event.monitorId,
       userId: event.userId,
-      type: event.type as EventType
+      type: event.type as EventType,
+      monitorName,
+      eventMessage: event.message,
     });
   }
 
   return createdEvents;
-}
+};

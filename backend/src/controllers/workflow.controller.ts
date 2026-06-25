@@ -2,11 +2,21 @@ import { Response } from "express";
 import Workflow from "../models/Workflow";
 import WorkflowExecution from "../models/WorkflowExecution";
 import { AuthRequest } from "../middlewares/auth";
+import {
+  normalizeWorkflowActions,
+  validateWorkflowActions,
+} from "../utils/actionValidation";
 
 export const createWorkflow = async (req: AuthRequest, res: Response) => {
   try {
+    const actionsError = validateWorkflowActions(req.body.actions || []);
+    if (actionsError) {
+      return res.status(400).json({ message: actionsError });
+    }
+
     const workflow = await Workflow.create({
       ...req.body,
+      actions: normalizeWorkflowActions(req.body.actions || []),
       userId: req.user.id,
     });
 
@@ -30,6 +40,15 @@ export const getWorkflows = async (req: AuthRequest, res: Response) => {
 
 export const updateWorkflow = async (req: AuthRequest, res: Response) => {
   try {
+    if (req.body.actions !== undefined) {
+      const actionsError = validateWorkflowActions(req.body.actions);
+      if (actionsError) {
+        return res.status(400).json({ message: actionsError });
+      }
+
+      req.body.actions = normalizeWorkflowActions(req.body.actions);
+    }
+
     const workflow = await Workflow.findOneAndUpdate(
       {
         _id: req.params.id,
@@ -37,7 +56,7 @@ export const updateWorkflow = async (req: AuthRequest, res: Response) => {
       },
       req.body,
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       }
     );

@@ -79,23 +79,22 @@ In progress:
 - Workflow schema already supports `actions[]`
 - Workflow execution records already store matched actions
 - Events already trigger workflow execution lookup
-- Placeholder files created for action handlers:
-  - `Action.ts`
-  - `ActionFactory.ts`
-  - `EmailAction.ts`
-  - `WebhookAction.ts`
+- Email action execution is implemented and wired into workflow execution
+- Workflow execution failures are logged correctly
+- SMTP configuration is still pending for successful email delivery
+- Webhook and Slack actions are intentionally deferred for later
 
 Still pending:
 
-- Implement concrete action handlers
-- Add action type definitions and validation
-- Execute actions from the workflow engine instead of only logging matched workflows
-- Add support for Email, Slack, and Webhook actions
-- Test action flows in Postman
+- Finish SMTP setup and verify successful email delivery
+- Clean up any old invalid workflow documents in the database
+- Add Webhook action later
+- Add Slack action later
+- Test final email flow in Postman
 
 ## Remaining Roadmap
 
-- Phase 7: Finish action handler implementation and execution
+- Phase 7: Finish email action delivery and defer webhook/slack until later
 - Phase 8: Frontend dashboard
 - Phase 9: Production upgrades
 

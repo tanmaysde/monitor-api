@@ -3,7 +3,6 @@ import { IWorkflow } from "../types/workflow.types";
 
 export interface IWorkflowDocument extends IWorkflow, Document {}
 
-
 const workflowConditionSchema = new mongoose.Schema(
   {},
   { _id: false, strict: false }
@@ -13,6 +12,7 @@ const workflowActionSchema = new mongoose.Schema(
   {
     type: {
       type: String,
+      enum: ["EMAIL"],
       required: true,
     },
     config: {

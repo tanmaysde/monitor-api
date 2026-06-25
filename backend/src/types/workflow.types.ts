@@ -1,8 +1,9 @@
 import { Types } from "mongoose";
 import { EventType } from "./event.types";
+import { ActionType } from "./action.types";
 
 export interface WorkflowAction {
-  type: string;
+  type: ActionType;
   config?: Record<string, unknown>;
 }
 
