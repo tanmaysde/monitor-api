@@ -5,7 +5,12 @@ import { createMonitor,getMonitorById,getMonitors,updateMonitor,deleteMonitor,ru
 const router = Router();
 
 router.post("/",auth,createMonitor);
+
 router.get("/",auth,getMonitors);
+router.get("/:id",auth,getMonitorById)
+
+router.put("/:id",auth,updateMonitor)
+router.delete("/:id",auth,deleteMonitor)
 
 router.post("/:id/check",auth,runMonitorCheck)
 router.get("/:id/logs", auth, getMonitorLogs);
@@ -13,8 +18,5 @@ router.get("/:id/analytics", auth, getMonitorAnalytics);
 router.get("/:id/events", auth, getMonitorEvents);
 
 
-router.get("/:id",auth,getMonitorById)
-router.put("/:id",auth,updateMonitor)
-router.delete("/:id",auth,deleteMonitor)
 
 export default router;

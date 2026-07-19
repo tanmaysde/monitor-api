@@ -13,7 +13,7 @@ Build an API Monitoring + Logs + Automation system inspired by n8n.
 - Phase 5: Complete
 - Phase 6: Complete
 - Phase 7: In progress
-- Phase 8: Not started
+- Phase 8: In progress
 - Phase 9: Not started
 
 ## Phase 1: Backend Foundation
@@ -80,6 +80,7 @@ In progress:
 - Workflow execution records already store matched actions
 - Events already trigger workflow execution lookup
 - Email action execution is implemented and wired into workflow execution
+- Manual workflow test endpoint is available: `POST /api/workflows/:id/test`
 - Workflow execution failures are logged correctly
 - SMTP configuration is still pending for successful email delivery
 - Webhook and Slack actions are intentionally deferred for later
@@ -88,14 +89,14 @@ Still pending:
 
 - Finish SMTP setup and verify successful email delivery
 - Clean up any old invalid workflow documents in the database
-- Add Webhook action later
-- Add Slack action later
+- Add Webhook action later if needed
+- Add Slack action later if needed
 - Test final email flow in Postman
 
 ## Remaining Roadmap
 
-- Phase 7: Finish email action delivery and defer webhook/slack until later
-- Phase 8: Frontend dashboard
+- Phase 7: Finish SMTP-backed email delivery and final cleanup
+- Phase 8: Finish frontend dashboard integration and testing
 - Phase 9: Production upgrades
 
 ## Working Rules

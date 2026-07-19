@@ -6,6 +6,7 @@ import {
   normalizeWorkflowActions,
   validateWorkflowActions,
 } from "../utils/actionValidation";
+import { runWorkflowTest } from "../services/workflow.service";
 
 export const createWorkflow = async (req: AuthRequest, res: Response) => {
   try {
@@ -108,6 +109,28 @@ export const getWorkflowExecutions = async (
     }).sort({ executedAt: -1 });
 
     res.json(executions);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const testWorkflow = async (req: AuthRequest, res: Response) => {
+  try {
+    const workflow = await Workflow.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!workflow) {
+      return res.status(404).json({ message: "Workflow not found" });
+    }
+
+    const execution = await runWorkflowTest(workflow._id);
+
+    res.json({
+      message: "Workflow test executed",
+      execution,
+    });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

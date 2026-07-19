@@ -16,6 +16,20 @@ type WorkflowEventInput = {
   eventMessage?: string;
 };
 
+type ExecuteWorkflowInput = {
+  workflow: {
+    _id: Types.ObjectId;
+    name: string;
+    actions: WorkflowAction[];
+  };
+  eventId: Types.ObjectId;
+  monitorId: Types.ObjectId;
+  userId: Types.ObjectId;
+  trigger: EventType;
+  monitorName?: string;
+  eventMessage?: string;
+};
+
 const isSupportedActionType = (type: unknown) => {
   return type === "EMAIL";
 };
@@ -30,6 +44,64 @@ const getInvalidWorkflowActionTypes = (actions: WorkflowAction[]) => {
     .map((action) => action.type);
 };
 
+const executeWorkflow = async ({
+  workflow,
+  eventId,
+  monitorId,
+  userId,
+  trigger,
+  monitorName,
+  eventMessage,
+}: ExecuteWorkflowInput) => {
+  const validActions = getValidWorkflowActions(workflow.actions);
+  const invalidActionTypes = getInvalidWorkflowActionTypes(workflow.actions);
+
+  try {
+    if (invalidActionTypes.length > 0) {
+      throw new Error(
+        `Unsupported action type(s): ${invalidActionTypes.join(", ")}`
+      );
+    }
+
+    for (const action of validActions) {
+      await executeActionByType(action.type, action.config || {}, {
+        workflowId: workflow._id,
+        eventId,
+        monitorId,
+        userId,
+        trigger,
+        workflowName: workflow.name,
+        monitorName,
+        eventMessage,
+      });
+    }
+
+    return WorkflowExecution.create({
+      workflowId: workflow._id,
+      eventId,
+      monitorId,
+      userId,
+      trigger,
+      status: "SUCCESS",
+      actions: validActions,
+      message: `Workflow "${workflow.name}" executed successfully`,
+      executedAt: new Date(),
+    });
+  } catch (error: any) {
+    return WorkflowExecution.create({
+      workflowId: workflow._id,
+      eventId,
+      monitorId,
+      userId,
+      trigger,
+      status: "FAILED",
+      actions: validActions,
+      message: `Workflow "${workflow.name}" failed: ${error.message}`,
+      executedAt: new Date(),
+    });
+  }
+};
+
 export const runWorkflowsForEvent = async (event: WorkflowEventInput) => {
   const workflows = await Workflow.find({
     userId: event.userId,
@@ -40,58 +112,44 @@ export const runWorkflowsForEvent = async (event: WorkflowEventInput) => {
   const executions: IWorkflowExecutionDocument[] = [];
 
   for (const workflow of workflows) {
-    const validActions = getValidWorkflowActions(workflow.actions);
-    const invalidActionTypes = getInvalidWorkflowActionTypes(workflow.actions);
+    const execution = await executeWorkflow({
+      workflow: {
+        _id: workflow._id as Types.ObjectId,
+        name: workflow.name,
+        actions: workflow.actions,
+      },
+      eventId: event.eventId,
+      monitorId: event.monitorId,
+      userId: event.userId,
+      trigger: event.type,
+      monitorName: event.monitorName,
+      eventMessage: event.eventMessage,
+    });
 
-    try {
-      if (invalidActionTypes.length > 0) {
-        throw new Error(
-          `Unsupported action type(s): ${invalidActionTypes.join(", ")}`
-        );
-      }
-
-      for (const action of validActions) {
-        await executeActionByType(action.type, action.config || {}, {
-          workflowId: workflow._id as Types.ObjectId,
-          eventId: event.eventId,
-          monitorId: event.monitorId,
-          userId: event.userId,
-          trigger: event.type,
-          workflowName: workflow.name,
-          monitorName: event.monitorName,
-          eventMessage: event.eventMessage,
-        });
-      }
-
-      const execution = await WorkflowExecution.create({
-        workflowId: workflow._id,
-        eventId: event.eventId,
-        monitorId: event.monitorId,
-        userId: event.userId,
-        trigger: event.type,
-        status: "SUCCESS",
-        actions: validActions,
-        message: `Workflow "${workflow.name}" executed successfully`,
-        executedAt: new Date(),
-      });
-
-      executions.push(execution);
-    } catch (error: any) {
-      const execution = await WorkflowExecution.create({
-        workflowId: workflow._id,
-        eventId: event.eventId,
-        monitorId: event.monitorId,
-        userId: event.userId,
-        trigger: event.type,
-        status: "FAILED",
-        actions: validActions,
-        message: `Workflow "${workflow.name}" failed: ${error.message}`,
-        executedAt: new Date(),
-      });
-
-      executions.push(execution);
-    }
+    executions.push(execution);
   }
 
   return executions;
+};
+
+export const runWorkflowTest = async (workflowId: Types.ObjectId) => {
+  const workflow = await Workflow.findById(workflowId);
+
+  if (!workflow) {
+    throw new Error("Workflow not found");
+  }
+
+  return executeWorkflow({
+    workflow: {
+      _id: workflow._id as Types.ObjectId,
+      name: workflow.name,
+      actions: workflow.actions,
+    },
+    eventId: new Types.ObjectId(),
+    monitorId: new Types.ObjectId(),
+    userId: workflow.userId,
+    trigger: workflow.trigger,
+    monitorName: "Manual Test Monitor",
+    eventMessage: `Manual test run for workflow "${workflow.name}"`,
+  });
 };
