@@ -6,6 +6,7 @@ import { checkMonitor } from "../services/monitor.service";
 import { calculateMonitorAnalytics } from "../services/analytics.service";
 import Event from "../models/Event";
 import { createMonitorEvents } from "../services/event.service";
+import redisClient from "../config/redis";
 
 export const createMonitor = async (req: AuthRequest, res: Response) => {
   try {
@@ -216,27 +217,53 @@ export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
 
 export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
   try {
+
+    const monitorId = req.params.id;
+    const userId = req.user.id;
+    
+    // 1. Define a unique Cache Key for this user + monitor
+    const cacheKey = `monitor:analytics:${monitorId}:${userId}`;
+
+    // 2. Look up the cache key in Redis
+    const cachedAnalytics = await redisClient.get(cacheKey);
+
+    if (cachedAnalytics) {
+      // 3. Cache HIT: Parse and return the cached JSON string immediately
+      console.log(`Cache HIT for key: ${cacheKey}`);
+      return res.json(JSON.parse(cachedAnalytics));
+    }
+
+
+    // 4. Cache MISS: Query MongoDB and calculate analytics
+    console.log(`Cache MISS for key: ${cacheKey}. Querying database...`);
     const monitor = await Monitor.findOne({
-      _id: req.params.id,
-      userId: req.user.id,
+      _id: monitorId,
+      userId: userId,
     });
 
     if (!monitor) {
       return res.status(404).json({ message: "Monitor not found" });
     }
 
-    const analytics = await calculateMonitorAnalytics(
-      String(req.params.id),
-      req.user.id,
+   const analytics = await calculateMonitorAnalytics(
+      String(monitorId),
+      userId,
     );
 
-    res.json({
+    const payload = {
       monitorId: monitor._id,
       monitorName: monitor.name,
       latestStatus: monitor.status,
       lastCheckedAt: monitor.lastCheckedAt,
       analytics,
-    });
+    };
+
+    // 5. Store the result in Redis with a 60 seconds Time-to-Live (TTL)
+    // "EX" means set expiration in seconds
+    await redisClient.set(cacheKey, JSON.stringify(payload), "EX", 60);
+
+    res.json(payload);
+    
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
