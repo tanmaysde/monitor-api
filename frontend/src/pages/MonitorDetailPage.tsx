@@ -81,6 +81,15 @@ export function MonitorDetailPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
+  // Pagination States for Logs
+  const [logsPage, setLogsPage] = useState(1);
+  const [totalLogsPages, setTotalLogsPages] = useState(1);
+
+  // Pagination States for Events
+  const [eventsPage, setEventsPage] = useState(1);
+  const [totalEventsPages, setTotalEventsPages] = useState(1);
+
+
   useEffect(() => {
     if (!token) return;
     void loadPage(token, id);
@@ -110,16 +119,50 @@ export function MonitorDetailPage() {
       }
 
       setSelectedMonitor(target);
+      setLogsPage(1);
+      setEventsPage(1);
 
-      const [logData, analyticsData, eventData] = await Promise.all([
-        api.getMonitorLogs(currentToken, target._id),
+      const [logRes, analyticsData, eventRes] = await Promise.all([
+        api.getMonitorLogs(currentToken, target._id, 1, 8),
         api.getMonitorAnalytics(currentToken, target._id),
-        api.getMonitorEvents(currentToken, target._id),
+        api.getMonitorEvents(currentToken, target._id, 1, 8),
       ]);
 
-      setLogs(logData);
+      setLogs(logRes.data);
+      setTotalLogsPages(logRes.pagination.pages);
+      setEvents(eventRes.data);
+      setTotalEventsPages(eventRes.pagination.pages);
       setAnalytics(analyticsData);
-      setEvents(eventData);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function fetchLogsPage(pageNumber: number) {
+    if (!token || !selectedMonitor) return;
+    try {
+      setBusy(true);
+      const res = await api.getMonitorLogs(token, selectedMonitor._id, pageNumber, 8);
+      setLogs(res.data);
+      setLogsPage(pageNumber);
+      setTotalLogsPages(res.pagination.pages);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function fetchEventsPage(pageNumber: number) {
+    if (!token || !selectedMonitor) return;
+    try {
+      setBusy(true);
+      const res = await api.getMonitorEvents(token, selectedMonitor._id, pageNumber, 8);
+      setEvents(res.data);
+      setEventsPage(pageNumber);
+      setTotalEventsPages(res.pagination.pages);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -840,14 +883,32 @@ export function MonitorDetailPage() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Incident Log Events
                 </h3>
-                <Badge variant="neutral" className="text-[10px]">{events.length}</Badge>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => fetchEventsPage(eventsPage - 1)}
+                    disabled={eventsPage === 1 || busy}
+                    className="p-1 border border-slate-200/65 dark:border-slate-800 disabled:opacity-50 text-[10px] font-semibold rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                    {eventsPage}/{totalEventsPages}
+                  </span>
+                  <button
+                    onClick={() => fetchEventsPage(eventsPage + 1)}
+                    disabled={eventsPage === totalEventsPages || busy}
+                    className="p-1 border border-slate-200/65 dark:border-slate-800 disabled:opacity-50 text-[10px] font-semibold rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
 
               {events.length === 0 ? (
                 <p className="text-xs text-slate-400 py-4 text-center">No critical incidents logs.</p>
               ) : (
                 <div className="relative border-l border-slate-100 dark:border-slate-800 pl-3.5 space-y-4 max-h-72 overflow-y-auto">
-                  {events.slice(0, 8).map((item) => (
+                  {events.map((item) => (
                     <div key={item._id} className="relative">
                       {/* Timeline marker */}
                       <span className={`absolute -left-[20px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-white dark:ring-slate-900 ${
@@ -875,7 +936,25 @@ export function MonitorDetailPage() {
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Historical Check Trails</h3>
               <p className="text-[11px] text-slate-400 dark:text-slate-500">Full logs recorded by automatic checking engine</p>
             </div>
-            <Badge variant="neutral">{logs.length} logs total</Badge>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => fetchLogsPage(logsPage - 1)}
+                disabled={logsPage === 1 || busy}
+                className="p-1 border border-slate-200/65 dark:border-slate-800 disabled:opacity-50 text-[10px] font-semibold rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+              >
+                Prev
+              </button>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                {logsPage}/{totalLogsPages}
+              </span>
+              <button
+                onClick={() => fetchLogsPage(logsPage + 1)}
+                disabled={logsPage === totalLogsPages || busy}
+                className="p-1 border border-slate-200/65 dark:border-slate-800 disabled:opacity-50 text-[10px] font-semibold rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800/60 max-h-80 overflow-y-auto pr-2">
@@ -884,7 +963,7 @@ export function MonitorDetailPage() {
                 No logs recorded yet. Run a checker trigger above or wait.
               </div>
             ) : (
-              logs.slice(0, 20).map((log) => (
+              logs.map((log) => (
                 <div key={log._id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-2">
                   <div className="flex items-center gap-3">
                     <span className={`w-2 h-2 rounded-full ${

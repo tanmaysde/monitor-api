@@ -89,10 +89,7 @@ export const deleteWorkflow = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getWorkflowExecutions = async (
-  req: AuthRequest,
-  res: Response
-) => {
+export const getWorkflowExecutions = async (req: AuthRequest, res: Response) => {
   try {
     const workflow = await Workflow.findOne({
       _id: req.params.id,
@@ -101,6 +98,31 @@ export const getWorkflowExecutions = async (
 
     if (!workflow) {
       return res.status(404).json({ message: "Workflow not found" });
+    }
+
+    const page = req.query.page ? parseInt(req.query.page as string) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
+
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+
+      const [executions, total] = await Promise.all([
+        WorkflowExecution.find({ workflowId: workflow._id, userId: req.user.id })
+          .sort({ executedAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        WorkflowExecution.countDocuments({ workflowId: workflow._id, userId: req.user.id })
+      ]);
+
+      return res.json({
+        data: executions,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
     }
 
     const executions = await WorkflowExecution.find({
@@ -113,6 +135,7 @@ export const getWorkflowExecutions = async (
     res.status(500).json({ message: error.message });
   }
 };
+
 
 export const testWorkflow = async (req: AuthRequest, res: Response) => {
   try {

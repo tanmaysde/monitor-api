@@ -173,6 +173,35 @@ export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Monitor not found" });
     }
 
+    // 1. Check if the user sent pagination query params (e.g. ?page=1&limit=10)
+    const page = req.query.page ? parseInt(req.query.page as string) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
+
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+
+      // 2. Fetch the records and count total items in parallel (fast)
+      const [logs, total] = await Promise.all([
+        Log.find({ monitorId: monitor._id, userId: req.user.id })
+          .sort({ checkedAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        Log.countDocuments({ monitorId: monitor._id, userId: req.user.id })
+      ]);
+
+      // 3. Return the new paginated envelope
+      return res.json({
+        data: logs,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    }
+
+    // 4. Default fallback: Return the array (Backward compatibility for frontend)
     const logs = await Log.find({
       monitorId: monitor._id,
       userId: req.user.id,
@@ -183,6 +212,7 @@ export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
   try {
@@ -223,6 +253,31 @@ export const getMonitorEvents = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Monitor not found" });
     }
 
+    const page = req.query.page ? parseInt(req.query.page as string) : null;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
+
+    if (page && limit) {
+      const skip = (page - 1) * limit;
+
+      const [events, total] = await Promise.all([
+        Event.find({ monitorId: monitor._id, userId: req.user.id })
+          .sort({ triggeredAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        Event.countDocuments({ monitorId: monitor._id, userId: req.user.id })
+      ]);
+
+      return res.json({
+        data: events,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    }
+
     const events = await Event.find({
       monitorId: monitor._id,
       userId: req.user.id,
@@ -233,3 +288,4 @@ export const getMonitorEvents = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+

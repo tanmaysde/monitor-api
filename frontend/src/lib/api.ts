@@ -62,14 +62,18 @@ export const api = {
   checkMonitor: (token: string, id: string) =>
     request<MonitorCheckResponse>(`/monitors/${id}/check`, { method: "POST", token }),
 
-  getMonitorLogs: (token: string, id: string) =>
-    request<MonitorLog[]>(`/monitors/${id}/logs`, { token }),
+  getMonitorLogs: (token: string, id: string, page?: number, limit?: number) => {
+    const query = page && limit ? `?page=${page}&limit=${limit}` : "";
+    return request<any>(`/monitors/${id}/logs${query}`, { token });
+  },
+
+  getMonitorEvents: (token: string, id: string, page?: number, limit?: number) => {
+    const query = page && limit ? `?page=${page}&limit=${limit}` : "";
+    return request<any>(`/monitors/${id}/events${query}`, { token });
+  },
 
   getMonitorAnalytics: (token: string, id: string) =>
     request<MonitorAnalyticsResponse>(`/monitors/${id}/analytics`, { token }),
-
-  getMonitorEvents: (token: string, id: string) =>
-    request<MonitorEvent[]>(`/monitors/${id}/events`, { token }),
 
   getWorkflows: (token: string) => request<Workflow[]>("/workflows", { token }),
 
