@@ -13,7 +13,7 @@ Build an API Monitoring + Logs + Automation system inspired by n8n.
 - Phase 5: Complete
 - Phase 6: Complete
 - Phase 7: In progress
-- Phase 8: In progress
+- Phase 8: Complete
 - Phase 9: Not started
 
 ## Phase 1: Backend Foundation
@@ -95,9 +95,9 @@ Still pending:
 
 ## Remaining Roadmap
 
-- Phase 7: Finish SMTP-backed email delivery and final cleanup
-- Phase 8: Finish frontend dashboard integration and testing
-- Phase 9: Production upgrades
+- Phase 7: Finish SMTP-backed email delivery and final cleanup (In progress)
+- Phase 8: Finish frontend dashboard integration and testing (Completed)
+- Phase 9: Production upgrades (Not started)
 
 ## Working Rules
 
