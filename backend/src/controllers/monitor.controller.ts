@@ -7,6 +7,7 @@ import { calculateMonitorAnalytics } from "../services/analytics.service";
 import Event from "../models/Event";
 import { createMonitorEvents } from "../services/event.service";
 import redisClient from "../config/redis";
+import logger from "../utils/logger";
 
 export const createMonitor = async (req: AuthRequest, res: Response) => {
   try {
@@ -157,9 +158,9 @@ export const runAllMonitorChecks = async () => {
         result,
       });
     }
-    console.log("All monitors checked");
+    logger.info("All monitors checked");
   } catch (error: any) {
-    console.error("Monitor cron failed:", error.message);
+    logger.error("Monitor cron failed: %s", error.message);
   }
 };
 
@@ -229,13 +230,13 @@ export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
 
     if (cachedAnalytics) {
       // 3. Cache HIT: Parse and return the cached JSON string immediately
-      console.log(`Cache HIT for key: ${cacheKey}`);
+      logger.info(`Cache HIT for key: ${cacheKey}`);
       return res.json(JSON.parse(cachedAnalytics));
     }
 
 
     // 4. Cache MISS: Query MongoDB and calculate analytics
-    console.log(`Cache MISS for key: ${cacheKey}. Querying database...`);
+    logger.info(`Cache MISS for key: ${cacheKey}. Querying database...`);
     const monitor = await Monitor.findOne({
       _id: monitorId,
       userId: userId,

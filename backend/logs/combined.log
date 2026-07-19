@@ -1,0 +1,13 @@
+{"level":"info","message":"MongoDB connected successfully","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:35"}
+{"level":"info","message":"Server is running on port 3000","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:35"}
+{"level":"info","message":"MongoDB connected successfully","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:40"}
+{"level":"info","message":"Server is running on port 3000","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:40"}
+{"level":"info","message":"Redis connected successfully","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:45"}
+{"level":"info","message":"MongoDB connected successfully","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:45"}
+{"level":"info","message":"Server is running on port 3000","service":"api-monitor-backend","timestamp":"2026-07-19 17:45:45"}
+{"level":"info","message":"Redis connected successfully","service":"api-monitor-backend","timestamp":"2026-07-19 17:46:11"}
+{"level":"info","message":"MongoDB connected successfully","service":"api-monitor-backend","timestamp":"2026-07-19 17:46:11"}
+{"level":"info","message":"Server is running on port 3000","service":"api-monitor-backend","timestamp":"2026-07-19 17:46:11"}
+{"level":"info","message":"All monitors checked","service":"api-monitor-backend","timestamp":"2026-07-19 17:47:07"}
+{"level":"info","message":"All monitors checked","service":"api-monitor-backend","timestamp":"2026-07-19 17:48:07"}
+{"level":"info","message":"All monitors checked","service":"api-monitor-backend","timestamp":"2026-07-19 17:49:07"}
