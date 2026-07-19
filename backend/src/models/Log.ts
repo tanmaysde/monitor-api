@@ -8,13 +8,11 @@ const logSchema = new mongoose.Schema<ILogDocument>(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Monitor",
       required: true,
-      index: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     status: {
       type: String,
@@ -35,10 +33,16 @@ const logSchema = new mongoose.Schema<ILogDocument>(
       type: Date,
       required: true,
       default: Date.now,
-      index: true,
     },
   },
   { timestamps: true }
-)
+);
+
+// 1. Compound Index: Optimizes queries filtering by monitor + user and sorting by date
+logSchema.index({ monitorId: 1, userId: 1, checkedAt: -1 });
+
+// 2. TTL Index: Automatically deletes log documents older than 30 days (value in seconds)
+logSchema.index({ checkedAt: 1 }, { expireAfterSeconds: 2592000 });
+
 
 export default mongoose.model<ILogDocument>("Log", logSchema);
