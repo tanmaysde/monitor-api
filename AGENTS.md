@@ -106,3 +106,26 @@ Still pending:
 - Prefer learning and explanation before automatic coding.
 - Test each API in Postman before moving ahead.
 - Track progress against this file after each milestone.
+
+## Feature Upgrades Roadmap
+
+### 1. AI Integrations (The Generative AI Layer)
+- [ ] **AI-Powered Root Cause Analysis (RCA)**: Add an "Analyze with AI" button on failed check logs. The backend sends failure status/headers to Google Gemini API to return a formatted Markdown diagnosis and fix guide.
+- [ ] **Natural Language Workflow Builder (Text-to-JSON)**: Allow users to write prompts like *"Email dev@company.com if Auth API goes down"* and use Gemini to parse it into valid workflow JSON schema.
+- [ ] **Daily AI Incident Summary Emails**: A daily cron job that synthesizes 24-hour incident logs using Gemini and emails an executive status report.
+
+### 2. Core Enterprise SaaS Features
+- [ ] **Multi-Tenant Workspaces & Role-Based Access Control (RBAC)**: Team workspaces, member invitations, and permissions (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`).
+- [ ] **Additional Alert Channels (Slack & Discord Webhooks)**: Send rich alert messages directly to Slack channels or Discord webhooks when an API goes down.
+- [ ] **Automated Weekly PDF Reports**: Generate weekly PDF uptime reports and email them as attachments.
+
+### 3. High-Performance Infrastructure
+- [ ] **Distributed Worker Queue (BullMQ + Redis)**: Replace in-app `node-cron` with a distributed Redis queue to isolate ping jobs into dedicated background worker processes.
+- [ ] **SSL/TLS Certificate Expiry Checker**: Read SSL certificate expiration dates via Node `tls` module and alert users 7/14/30 days before expiration.
+- [ ] **Multi-Region Monitoring (Edge Workers)**: Check APIs from global regions (US, Europe, Asia) using serverless edge handlers.
+
+### 4. Interactive Frontend & Real-Time UX
+- [ ] **Live Dashboard Updates (WebSockets / Socket.io)**: Establish persistent WebSockets to push status badge updates to the React client in real time.
+- [ ] **Public Status Pages**: Generate read-only, guest-accessible status pages (`/status/:id`) for public systems without authentication.
+- [ ] **Historical Log Exporter (CSV/JSON)**: Download button on check history to export logs in CSV format.
+
