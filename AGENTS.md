@@ -121,7 +121,7 @@ Still pending:
 
 ### 3. High-Performance Infrastructure
 - [ ] **Distributed Worker Queue (BullMQ + Redis)**: Replace in-app `node-cron` with a distributed Redis queue to isolate ping jobs into dedicated background worker processes.
-- [ ] **SSL/TLS Certificate Expiry Checker**: Read SSL certificate expiration dates via Node `tls` module and alert users 7/14/30 days before expiration.
+- [x] **SSL/TLS Certificate Expiry Checker**: Read SSL certificate expiration dates via Node `tls` module and alert users 7/14/30 days before expiration. (Completed)
 - [ ] **Multi-Region Monitoring (Edge Workers)**: Check APIs from global regions (US, Europe, Asia) using serverless edge handlers.
 
 ### 4. Interactive Frontend & Real-Time UX

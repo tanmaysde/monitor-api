@@ -13,6 +13,17 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
+export interface SSLInfo {
+  isHttps: boolean;
+  validTo?: string;
+  validFrom?: string;
+  daysRemaining?: number;
+  issuer?: string;
+  isValid?: boolean;
+  isExpired?: boolean;
+  error?: string;
+}
+
 export interface Monitor {
   _id: string;
   name: string;
@@ -23,6 +34,7 @@ export interface Monitor {
   status: MonitorStatus;
   lastCheckedAt?: string;
   lastResponseTime?: number;
+  sslInfo?: SSLInfo;
   createdAt: string;
   updatedAt: string;
 }

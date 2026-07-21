@@ -37,6 +37,16 @@ const monitorSchema = new mongoose.Schema<IMonitorDocument>(
     lastResponseTime:{
       type:Number,
       default:0
+    },
+    sslInfo: {
+      isHttps: { type: Boolean, default: false },
+      validTo: { type: Date },
+      validFrom: { type: Date },
+      daysRemaining: { type: Number },
+      issuer: { type: String },
+      isValid: { type: Boolean },
+      isExpired: { type: Boolean },
+      error: { type: String },
     }
   },
   { timestamps: true },
