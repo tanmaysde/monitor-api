@@ -657,14 +657,15 @@ export function MonitorDetailPage() {
       </div>
     );
 
-    // Compute uptime box stats (mocking 30 blocks of recent statuses based on loaded logs)
+    // Compute uptime box stats (30 blocks of recent statuses)
     const blocksCount = 30;
-    const uptimeBlocks = Array.from({ length: blocksCount }).map((_, i) => {
-      const logIdx = Math.floor(logs.length * (i / blocksCount));
-      const logItem = logs[logIdx];
-      if (!logItem) return "UNKNOWN";
-      return logItem.status; // "UP" | "DOWN"
-    }).reverse();
+    // Take the 30 most recent logs (logs is sorted newest-first) and reverse to oldest-first
+    const recentLogs = logs.slice(0, blocksCount).reverse();
+    const unknownPaddingCount = Math.max(0, blocksCount - recentLogs.length);
+    const uptimeBlocks: ("UP" | "DOWN" | "UNKNOWN")[] = [
+      ...Array(unknownPaddingCount).fill("UNKNOWN"),
+      ...recentLogs.map((l) => l.status),
+    ];
 
     // Latency Line Chart - Custom SVG visual latency lines
     const lastLogs = logs.slice(0, 10).reverse();
@@ -847,24 +848,69 @@ export function MonitorDetailPage() {
           {/* Details / Timelines side panels */}
           <div className="space-y-6">
             
-            {/* Meta Data stats card */}
+            {/* Meta Data stats card / SSL Checker Info */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-850 p-5 rounded-xl space-y-4 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                SSL Checker Info
-              </h3>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-850">
-                  <span className="text-slate-450">SSL Certificate</span>
-                  <span className="font-semibold text-healthy-600 dark:text-healthy-500 flex items-center gap-1">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  SSL / TLS Certificate
+                </h3>
+                {selectedMonitor.sslInfo?.isHttps && selectedMonitor.sslInfo.isValid && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                     <ShieldCheck className="w-3.5 h-3.5" /> Valid
                   </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-850">
-                  <span className="text-slate-450">HTTP Version</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">HTTP/1.1</span>
-                </div>
+                )}
+                {selectedMonitor.sslInfo?.isHttps && selectedMonitor.sslInfo.isExpired && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                    Expired
+                  </span>
+                )}
+                {!selectedMonitor.sslInfo?.isHttps && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                    HTTP (No SSL)
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2 text-xs">
+                {selectedMonitor.sslInfo?.isHttps ? (
+                  <>
+                    <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-850">
+                      <span className="text-slate-450">Days Remaining</span>
+                      <span className={`font-semibold ${
+                        (selectedMonitor.sslInfo.daysRemaining ?? 0) <= 14 
+                          ? "text-amber-500" 
+                          : "text-slate-800 dark:text-slate-200"
+                      }`}>
+                        {selectedMonitor.sslInfo.daysRemaining !== undefined 
+                          ? `${selectedMonitor.sslInfo.daysRemaining} days` 
+                          : "N/A"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-850">
+                      <span className="text-slate-450">Issuer</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[150px]">
+                        {selectedMonitor.sslInfo.issuer || "Unknown"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between py-1 border-b border-slate-50 dark:border-slate-850">
+                      <span className="text-slate-450">Valid Until</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">
+                        {selectedMonitor.sslInfo.validTo 
+                          ? new Date(selectedMonitor.sslInfo.validTo).toLocaleDateString() 
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-2 text-slate-400 text-[11px]">
+                    This monitor target uses standard HTTP. Perform a check to update SSL metrics if updated to HTTPS.
+                  </div>
+                )}
+
                 <div className="flex justify-between py-1">
-                  <span className="text-slate-450">Hostname Target</span>
+                  <span className="text-slate-450">Target Host</span>
                   <a
                     href={selectedMonitor.url}
                     target="_blank"

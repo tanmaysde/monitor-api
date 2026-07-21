@@ -8,6 +8,8 @@ import Event from "../models/Event";
 import { createMonitorEvents } from "../services/event.service";
 import redisClient from "../config/redis";
 import logger from "../utils/logger";
+import { checkSslCertificate } from "../services/ssl.service";
+
 
 export const createMonitor = async (req: AuthRequest, res: Response) => {
   try {
@@ -91,11 +93,15 @@ export const runMonitorCheck = async (req: AuthRequest, res: Response) => {
     }
 
     const previousStatus = monitor.status;
-    const result = await checkMonitor(monitor.url, monitor.method);
+    const [result, sslInfo] = await Promise.all([
+      checkMonitor(monitor.url, monitor.method),
+      checkSslCertificate(monitor.url),
+    ]);
 
     monitor.status = result.status;
     monitor.lastCheckedAt = result.checkedAt;
     monitor.lastResponseTime = result.responseTime;
+    monitor.sslInfo = sslInfo;
 
     await monitor.save();
 
@@ -133,11 +139,15 @@ export const runAllMonitorChecks = async () => {
     const monitors = await Monitor.find();
     for (const monitor of monitors) {
       const previousStatus = monitor.status;
-      const result = await checkMonitor(monitor.url, monitor.method);
+      const [result, sslInfo] = await Promise.all([
+      checkMonitor(monitor.url, monitor.method),
+      checkSslCertificate(monitor.url),
+    ]);
 
       monitor.status = result.status;
       monitor.lastCheckedAt = result.checkedAt;
       monitor.lastResponseTime = result.responseTime;
+      monitor.sslInfo = sslInfo;
 
       await monitor.save();
 
