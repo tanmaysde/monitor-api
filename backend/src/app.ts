@@ -5,6 +5,7 @@ import monitorRoutes from "./routes/monitor.routes";
 import authRoutes from "./routes/auth.routes";
 import workflowRoutes from "./routes/workflow.routes";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 
 //rate limiting
 import rateLimit from "express-rate-limit";
@@ -26,9 +27,9 @@ const apiLimiter = rateLimit({
 const app = express();
 
 app.use(helmet());
+app.use(cookieParser());
 app.use(cors());
 app.use(express.json());
-
 // Apply the limiter to all routes under "/api"
 app.use("/api", apiLimiter); 
 

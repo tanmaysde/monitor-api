@@ -19,20 +19,57 @@ type RequestOptions = {
 };
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  // Always read latest token from localStorage if not explicitly passed
+  const currentToken = options.token ?? localStorage.getItem("api-monitor-token");
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+      ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
     },
+    // CRITICAL: Tells the browser to send cookies (httpOnly Refresh Token) to backend
+    credentials: "include", 
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
-
+  // Handle Token Expiration (401 Unauthorized)
+  if (
+    response.status === 401 && 
+    path !== "/auth/login" && 
+    path !== "/auth/register" && 
+    path !== "/auth/refresh"
+  ) {
+    try {
+      // 1. Silent request to get a new Access Token
+      const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Sends cookie
+      });
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json();
+        const newAccessToken = data.token;
+        // 2. Save the new Access Token
+        localStorage.setItem("api-monitor-token", newAccessToken);
+        // 3. Retry original request with the new Access Token!
+        return request<T>(path, { ...options, token: newAccessToken });
+      } else {
+        // Refresh token has expired/revoked -> Clear local storage & force redirect to login
+        localStorage.removeItem("api-monitor-token");
+        localStorage.removeItem("api-monitor-user");
+        window.location.href = "/";
+        throw new Error("Session expired. Please log in again.");
+      }
+    } catch (refreshErr) {
+      localStorage.removeItem("api-monitor-token");
+      localStorage.removeItem("api-monitor-user");
+      window.location.href = "/";
+      throw refreshErr;
+    }
+  }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({ message: "Request failed" }));
     throw new Error(payload.message ?? "Request failed");
   }
-
   return response.json() as Promise<T>;
 }
 
@@ -43,6 +80,9 @@ export const api = {
   login: (input: { email: string; password: string }) =>
     request<AuthResponse>("/auth/login", { method: "POST", body: input }),
 
+  logout: () =>
+    request<{ message: string }>("/auth/logout", { method: "POST" }),
+  
   getMonitors: (token: string) => request<Monitor[]>("/monitors", { token }),
 
   createMonitor: (

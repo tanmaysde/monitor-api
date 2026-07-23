@@ -53,13 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthError("");
   };
 
-  const logout = () => {
+    const logout = () => {
+    // 1. Tell backend to clear HTTP-Only cookie
+    api.logout().catch(() => {}); 
+    
+    // 2. Clear local storage states
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
     setAuthError("");
   };
+
 
   const value = useMemo<AuthContextValue>(
     () => ({
