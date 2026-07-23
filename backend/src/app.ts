@@ -28,7 +28,28 @@ const app = express();
 
 app.use(helmet());
 app.use(cookieParser());
-app.use(cors());
+
+const allowedOrigins = [
+  "http://localhost:5173", // Local development
+  "https://monitor-api-frontend.onrender.com" // Your production URL
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, postman, server-to-server)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Blocked by CORS"));
+      }
+    },
+    credentials: true, // Crucial for cookie passing!
+  })
+);
+
 app.use(express.json());
 // Apply the limiter to all routes under "/api"
 app.use("/api", apiLimiter); 
