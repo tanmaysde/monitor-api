@@ -120,7 +120,7 @@ Still pending:
 - [ ] **Automated Weekly PDF Reports**: Generate weekly PDF uptime reports and email them as attachments.
 
 ### 3. High-Performance Infrastructure
-- [ ] **Distributed Worker Queue (BullMQ + Redis)**: Replace in-app `node-cron` with a distributed Redis queue to isolate ping jobs into dedicated background worker processes.
+- [x] **Distributed Worker Queue (BullMQ + Redis)**: Replace in-app `node-cron` with a distributed Redis queue to isolate ping jobs into dedicated background worker processes. (Completed)
 - [x] **SSL/TLS Certificate Expiry Checker**: Read SSL certificate expiration dates via Node `tls` module and alert users 7/14/30 days before expiration. (Completed)
 - [ ] **Multi-Region Monitoring (Edge Workers)**: Check APIs from global regions (US, Europe, Asia) using serverless edge handlers.
 
@@ -128,4 +128,13 @@ Still pending:
 - [ ] **Live Dashboard Updates (WebSockets / Socket.io)**: Establish persistent WebSockets to push status badge updates to the React client in real time.
 - [ ] **Public Status Pages**: Generate read-only, guest-accessible status pages (`/status/:id`) for public systems without authentication.
 - [ ] **Historical Log Exporter (CSV/JSON)**: Download button on check history to export logs in CSV format.
+- [ ] **Drag-and-Drop Visual Workflow Builder (React Flow)**: Build an n8n-like interactive canvas where users drag triggers (API Down, Slow Response) and link them to actions (Email, Webhook) visually.
 
+
+extra:
+google login
+otp login
+logout of all devices
+user edit
+profile page
+redis stream?
