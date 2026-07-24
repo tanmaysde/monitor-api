@@ -40,12 +40,14 @@ const emptyWorkflowForm = {
   name: "",
   trigger: "API_DOWN" as EventType,
   enabled: true,
-  actionType: "EMAIL" as "EMAIL" | "WEBHOOK",
+  actionType: "EMAIL" as "EMAIL" | "WEBHOOK" | "SLACK" | "TEAMS",
   to: "",
   subject: "",
   text: "",
   webhookUrl: "",
   webhookHeadersJson: "{}",
+  slackWebhookUrl: "",
+  teamsWebhookUrl: "",
 };
 
 export function WorkflowDetailPage() {
@@ -126,7 +128,7 @@ export function WorkflowDetailPage() {
           subject: form.subject,
           text: form.text,
         };
-      } else {
+      } else if (form.actionType === "WEBHOOK") {
         let headers = {};
         try {
           headers = JSON.parse(form.webhookHeadersJson || "{}");
@@ -136,6 +138,14 @@ export function WorkflowDetailPage() {
         actionConfig = {
           url: form.webhookUrl,
           headers,
+        };
+      } else if (form.actionType === "SLACK") {
+        actionConfig = {
+          webhookUrl: form.slackWebhookUrl,
+        };
+      } else if (form.actionType === "TEAMS") {
+        actionConfig = {
+          webhookUrl: form.teamsWebhookUrl,
         };
       }
 
@@ -219,7 +229,10 @@ export function WorkflowDetailPage() {
   function startEdit() {
     if (!selectedWorkflow) return;
     const action = selectedWorkflow.actions[0];
+    const isEmail = action?.type === "EMAIL";
     const isWebhook = action?.type === "WEBHOOK";
+    const isSlack = action?.type === "SLACK";
+    const isTeams = action?.type === "TEAMS";
 
     setEditingWorkflowId(selectedWorkflow._id);
     setForm({
@@ -227,11 +240,13 @@ export function WorkflowDetailPage() {
       trigger: selectedWorkflow.trigger,
       enabled: selectedWorkflow.enabled,
       actionType: action?.type ?? "EMAIL",
-      to: !isWebhook ? (action?.config as any)?.to ?? "" : "",
-      subject: !isWebhook ? (action?.config as any)?.subject ?? "" : "",
-      text: !isWebhook ? (action?.config as any)?.text ?? "" : "",
+      to: isEmail ? (action?.config as any)?.to ?? "" : "",
+      subject: isEmail ? (action?.config as any)?.subject ?? "" : "",
+      text: isEmail ? (action?.config as any)?.text ?? "" : "",
       webhookUrl: isWebhook ? (action?.config as any)?.url ?? "" : "",
       webhookHeadersJson: isWebhook ? JSON.stringify((action?.config as any)?.headers ?? {}, null, 2) : "{}",
+      slackWebhookUrl: isSlack ? (action?.config as any)?.webhookUrl ?? "" : "",
+      teamsWebhookUrl: isTeams ? (action?.config as any)?.webhookUrl ?? "" : "",
     });
     setIsAddModalOpen(true);
   }
@@ -263,7 +278,12 @@ export function WorkflowDetailPage() {
   const filteredWorkflows = workflows
     .filter((w) => {
       const action = w.actions[0];
-      const targetVal = action?.type === "EMAIL" ? (action.config as any)?.to : (action?.config as any)?.url;
+      const targetVal =
+        action?.type === "EMAIL"
+          ? (action.config as any)?.to
+          : action?.type === "WEBHOOK"
+          ? (action.config as any)?.url
+          : (action?.config as any)?.webhookUrl;
       const matchSearch =
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (targetVal && targetVal.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -284,8 +304,18 @@ export function WorkflowDetailPage() {
       } else if (sortColumn === "recipient") {
         const aAct = a.actions[0];
         const bAct = b.actions[0];
-        const aTarget = aAct?.type === "EMAIL" ? (aAct.config as any)?.to : (aAct?.config as any)?.url;
-        const bTarget = bAct?.type === "EMAIL" ? (bAct.config as any)?.to : (bAct?.config as any)?.url;
+        const aTarget =
+          aAct?.type === "EMAIL"
+            ? (aAct.config as any)?.to
+            : aAct?.type === "WEBHOOK"
+            ? (aAct.config as any)?.url
+            : (aAct?.config as any)?.webhookUrl;
+        const bTarget =
+          bAct?.type === "EMAIL"
+            ? (bAct.config as any)?.to
+            : bAct?.type === "WEBHOOK"
+            ? (bAct.config as any)?.url
+            : (bAct?.config as any)?.webhookUrl;
         aVal = (aTarget || "").toLowerCase();
         bVal = (bTarget || "").toLowerCase();
       }
@@ -468,15 +498,23 @@ export function WorkflowDetailPage() {
                     <td className="px-5 py-3.5 font-mono text-[10px] text-slate-400 dark:text-slate-500">
                       {w.actions[0]?.type === "EMAIL" ? (
                         (w.actions[0]?.config as any)?.to || "—"
-                      ) : (
+                      ) : w.actions[0]?.type === "WEBHOOK" ? (
                         <span className="text-brand-500 font-semibold">[Webhook] {(w.actions[0]?.config as any)?.url || "—"}</span>
+                      ) : w.actions[0]?.type === "SLACK" ? (
+                        <span className="text-emerald-500 font-semibold">[Slack] {(w.actions[0]?.config as any)?.webhookUrl || "—"}</span>
+                      ) : (
+                        <span className="text-indigo-500 font-semibold">[Teams] {(w.actions[0]?.config as any)?.webhookUrl || "—"}</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 truncate max-w-[200px]" title={w.actions[0]?.type === "EMAIL" ? (w.actions[0]?.config as any)?.subject : "Custom Headers"}>
+                    <td className="px-5 py-3.5 truncate max-w-[200px]" title={w.actions[0]?.type === "EMAIL" ? (w.actions[0]?.config as any)?.subject : "Integration Target"}>
                       {w.actions[0]?.type === "EMAIL" ? (
                         (w.actions[0]?.config as any)?.subject || "—"
-                      ) : (
+                      ) : w.actions[0]?.type === "WEBHOOK" ? (
                         `Headers: ${Object.keys((w.actions[0]?.config as any)?.headers || {}).join(", ") || "None"}`
+                      ) : w.actions[0]?.type === "SLACK" ? (
+                        "Outbound Slack Blocks"
+                      ) : (
+                        "Outbound Teams MessageCard"
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
@@ -649,19 +687,37 @@ export function WorkflowDetailPage() {
             trendType="neutral"
           />
           <StatCard
-            title={action?.type === "EMAIL" ? "Recipient Mail" : "Webhook Target"}
+            title={
+              action?.type === "EMAIL"
+                ? "Recipient Mail"
+                : action?.type === "WEBHOOK"
+                ? "Webhook Target"
+                : action?.type === "SLACK"
+                ? "Slack Webhook"
+                : "Teams Webhook"
+            }
             value={
               action?.type === "EMAIL"
                 ? ((action?.config as any)?.to ? (action.config as any).to.split("@")[0] : "—")
-                : ((action?.config as any)?.url ? "POST Request" : "—")
+                : "Outgoing Hook"
             }
             icon={action?.type === "EMAIL" ? <Mail className="w-5 h-5 text-slate-500" /> : <Terminal className="w-5 h-5 text-brand-500" />}
             description={
               action?.type === "EMAIL"
                 ? ((action?.config as any)?.to || "No email")
-                : ((action?.config as any)?.url || "No url")
+                : action?.type === "WEBHOOK"
+                ? ((action?.config as any)?.url || "No url")
+                : ((action?.config as any)?.webhookUrl || "No webhook url")
             }
-            trend={action?.type === "EMAIL" ? "SMTP target" : "HTTP POST webhook"}
+            trend={
+              action?.type === "EMAIL"
+                ? "SMTP target"
+                : action?.type === "WEBHOOK"
+                ? "HTTP POST webhook"
+                : action?.type === "SLACK"
+                ? "Slack app channel"
+                : "Teams connector"
+            }
             trendType="neutral"
           />
           <StatCard
@@ -683,9 +739,15 @@ export function WorkflowDetailPage() {
         {/* Action Configuration Preview Pane */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-850 rounded-xl p-5 space-y-3 shadow-sm">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            {action?.type === "EMAIL" ? "Email Payload Configuration" : "Webhook Destination Configuration"}
+            {action?.type === "EMAIL"
+              ? "Email Payload Configuration"
+              : action?.type === "WEBHOOK"
+              ? "Webhook Destination Configuration"
+              : action?.type === "SLACK"
+              ? "Slack App Webhook Integration"
+              : "Microsoft Teams Connector Integration"}
           </h3>
-          {action?.type === "EMAIL" ? (
+          {action?.type === "EMAIL" && (
             <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
               <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex gap-4 text-slate-500">
                 <div className="font-mono">
@@ -696,7 +758,8 @@ export function WorkflowDetailPage() {
                 {(action?.config as any)?.text || "No email body text configured."}
               </div>
             </div>
-          ) : (
+          )}
+          {action?.type === "WEBHOOK" && (
             <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
               <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-1 text-slate-500">
                 <div className="font-mono">
@@ -706,6 +769,30 @@ export function WorkflowDetailPage() {
               <div className="p-4 bg-slate-50/30 dark:bg-slate-950/20 font-mono text-[11px] text-slate-650 dark:text-slate-400 whitespace-pre-wrap">
                 <span className="font-bold block mb-1">Custom Headers:</span>
                 {JSON.stringify((action?.config as any)?.headers || {}, null, 2)}
+              </div>
+            </div>
+          )}
+          {action?.type === "SLACK" && (
+            <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
+              <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-1 text-slate-500">
+                <div className="font-mono">
+                  <span className="font-bold">Slack Incoming Webhook:</span> {(action?.config as any)?.webhookUrl || "—"}
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50/30 dark:bg-slate-950/20 text-xs text-slate-500 leading-normal">
+                Status change notifications (🔴 Red for down events, 🟢 Green for recovery events) will be formatted into Slack Block Kit payload structures and posted to this incoming webhook.
+              </div>
+            </div>
+          )}
+          {action?.type === "TEAMS" && (
+            <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
+              <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-1 text-slate-500">
+                <div className="font-mono">
+                  <span className="font-bold">Teams Connector Webhook:</span> {(action?.config as any)?.webhookUrl || "—"}
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50/30 dark:bg-slate-950/20 text-xs text-slate-500 leading-normal">
+                Incident status updates will be packaged in the Teams-compatible Connector MessageCard JSON format and delivered to your channel webhook destination.
               </div>
             </div>
           )}

@@ -5,6 +5,8 @@ import {
   ActionType,
   EmailActionConfig,
   WebhookActionConfig,
+  SlackActionConfig,
+  TeamsActionConfig,
 } from "../types/action.types";
 
 const isObject = (value: unknown): value is Record<string, unknown> => {
@@ -30,6 +32,14 @@ const isWebhookActionConfig = (config: unknown): config is WebhookActionConfig =
     config.url.trim().length > 0 &&
     (config.headers === undefined || isObject(config.headers))
   );
+};
+
+const isSlackActionConfig = (config: unknown): config is SlackActionConfig => {
+  return isObject(config) && typeof config.webhookUrl === "string" && config.webhookUrl.trim().length > 0;
+};
+
+const isTeamsActionConfig = (config: unknown): config is TeamsActionConfig => {
+  return isObject(config) && typeof config.webhookUrl === "string" && config.webhookUrl.trim().length > 0;
 };
 
 export const executeEmailAction = async (
@@ -88,6 +98,104 @@ export const executeWebhookAction = async (
   });
 };
 
+/**
+ * Executes a Slack Alert Action (POST blocks attachment payload to Slack webhook)
+ */
+export const executeSlackAction = async (
+  config: SlackActionConfig,
+  context: ActionContext
+) => {
+  const isUp = context.trigger === "API_UP";
+  const emoji = isUp ? "🟢" : "🔴";
+  const color = isUp ? "#2ecc71" : "#e74c3c";
+
+  const slackPayload = {
+    attachments: [
+      {
+        color,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*${emoji} API Monitor Alert: ${context.monitorName || "Unknown Monitor"}*`,
+            },
+          },
+          {
+            type: "section",
+            fields: [
+              {
+                type: "mrkdwn",
+                text: `*Event:* \`${context.trigger}\``,
+              },
+              {
+                type: "mrkdwn",
+                text: `*Workflow:* ${context.workflowName || "Unknown"}`,
+              },
+            ],
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Details:* ${context.eventMessage || "No message provided."}`,
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  await axios.post(config.webhookUrl, slackPayload, {
+    headers: { "Content-Type": "application/json" },
+    timeout: 10000,
+  });
+};
+
+/**
+ * Executes a Microsoft Teams Alert Action (POST MessageCard format to Teams webhook)
+ */
+export const executeTeamsAction = async (
+  config: TeamsActionConfig,
+  context: ActionContext
+) => {
+  const isUp = context.trigger === "API_UP";
+  const themeColor = isUp ? "2ECC71" : "E74C3C";
+  const statusEmoji = isUp ? "🟢" : "🔴";
+
+  const teamsPayload = {
+    "@type": "MessageCard",
+    "@context": "http://schema.org/extensions",
+    "themeColor": themeColor,
+    "summary": `API Monitor Alert: ${context.monitorName}`,
+    "sections": [
+      {
+        "activityTitle": `### ${statusEmoji} API Monitor Alert`,
+        "activitySubtitle": `Triggered by workflow: **${context.workflowName || "Unknown"}**`,
+        "facts": [
+          {
+            "name": "Monitor Target",
+            "value": context.monitorName || "Unknown Monitor"
+          },
+          {
+            "name": "Trigger Event",
+            "value": `\`${context.trigger}\``
+          },
+          {
+            "name": "Status Log",
+            "value": context.eventMessage || "No description details."
+          }
+        ],
+        "markdown": true
+      }
+    ]
+  };
+
+  await axios.post(config.webhookUrl, teamsPayload, {
+    headers: { "Content-Type": "application/json" },
+    timeout: 10000,
+  });
+};
 
 export const executeActionByType = async (
   type: ActionType,
@@ -103,11 +211,27 @@ export const executeActionByType = async (
     return;
   }
 
-   if (type === "WEBHOOK") {
+  if (type === "WEBHOOK") {
     if (!isWebhookActionConfig(config)) {
       throw new Error("Invalid WEBHOOK action config");
     }
     await executeWebhookAction(config, context);
+    return;
+  }
+
+  if (type === "SLACK") {
+    if (!isSlackActionConfig(config)) {
+      throw new Error("Invalid SLACK action config");
+    }
+    await executeSlackAction(config, context);
+    return;
+  }
+
+  if (type === "TEAMS") {
+    if (!isTeamsActionConfig(config)) {
+      throw new Error("Invalid TEAMS action config");
+    }
+    await executeTeamsAction(config, context);
     return;
   }
 

@@ -20,7 +20,8 @@ import {
   Plus,
   ArrowUpRight,
   GitBranch,
-  Mail
+  Mail,
+  Terminal
 } from "lucide-react";
 
 export function DashboardPage() {
@@ -270,10 +271,35 @@ export function DashboardPage() {
                       </Badge>
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-slate-500">
-                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate max-w-xs">
-                        {workflow.actions[0]?.config.to || "No recipient"}
-                      </span>
+                      {workflow.actions[0]?.type === "EMAIL" ? (
+                        <>
+                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-xs">
+                            {(workflow.actions[0]?.config as any)?.to || "No recipient"}
+                          </span>
+                        </>
+                      ) : workflow.actions[0]?.type === "WEBHOOK" ? (
+                        <>
+                          <Terminal className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                          <span className="truncate max-w-xs font-semibold text-brand-500">
+                            [Webhook] {(workflow.actions[0]?.config as any)?.url || "No url"}
+                          </span>
+                        </>
+                      ) : workflow.actions[0]?.type === "SLACK" ? (
+                        <>
+                          <Terminal className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span className="truncate max-w-xs font-semibold text-emerald-500">
+                            [Slack] {(workflow.actions[0]?.config as any)?.webhookUrl || "No webhookUrl"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Terminal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span className="truncate max-w-xs font-semibold text-indigo-500">
+                            [Teams] {(workflow.actions[0]?.config as any)?.webhookUrl || "No webhookUrl"}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

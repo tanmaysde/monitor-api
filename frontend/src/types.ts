@@ -91,9 +91,17 @@ export interface WebhookActionConfig {
   headers?: Record<string, string>;
 }
 
+export interface SlackActionConfig {
+  webhookUrl: string;
+}
+
+export interface TeamsActionConfig {
+  webhookUrl: string;
+}
+
 export interface WorkflowAction {
-  type: "EMAIL" | "WEBHOOK";
-  config: EmailActionConfig | WebhookActionConfig;
+  type: "EMAIL" | "WEBHOOK" | "SLACK" | "TEAMS";
+  config: EmailActionConfig | WebhookActionConfig | SlackActionConfig | TeamsActionConfig;
 }
 
 export interface Workflow {

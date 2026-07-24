@@ -8,7 +8,7 @@ type WorkflowFormState = {
   name: string;
   trigger: EventType;
   enabled: boolean;
-  actionType: "EMAIL" | "WEBHOOK";
+  actionType: "EMAIL" | "WEBHOOK" | "SLACK" | "TEAMS";
   // Email configs
   to: string;
   subject: string;
@@ -16,6 +16,10 @@ type WorkflowFormState = {
   // Webhook configs
   webhookUrl: string;
   webhookHeadersJson: string;
+  // Slack configs
+  slackWebhookUrl: string;
+  // Teams configs
+  teamsWebhookUrl: string;
 };
 
 type WorkflowFormProps = {
@@ -62,7 +66,7 @@ export function WorkflowForm({
             onChange={(event) =>
               onChange({ ...form, name: event.target.value })
             }
-            placeholder="e.g. Alert dev channel on API DOWN"
+            placeholder="e.g. Slack alert on Auth API down"
             required
             disabled={busy}
             description="Give this workflow a descriptive label."
@@ -96,7 +100,7 @@ export function WorkflowForm({
           onChange={(event) =>
             onChange({
               ...form,
-              actionType: event.target.value as "EMAIL" | "WEBHOOK",
+              actionType: event.target.value as any,
             })
           }
           disabled={busy}
@@ -104,11 +108,13 @@ export function WorkflowForm({
         >
           <option value="EMAIL">📧 Email Warning</option>
           <option value="WEBHOOK">🔗 Webhook HTTP POST Alert</option>
+          <option value="SLACK">💬 Slack Channel Message</option>
+          <option value="TEAMS">👥 Microsoft Teams Message</option>
         </Select>
       </div>
 
       {/* Conditional Inputs based on Action Type */}
-      {form.actionType === "EMAIL" ? (
+      {form.actionType === "EMAIL" && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
@@ -155,7 +161,9 @@ export function WorkflowForm({
             </p>
           </div>
         </>
-      ) : (
+      )}
+
+      {form.actionType === "WEBHOOK" && (
         <>
           <div>
             <Input
@@ -191,6 +199,40 @@ export function WorkflowForm({
             </p>
           </div>
         </>
+      )}
+
+      {form.actionType === "SLACK" && (
+        <div>
+          <Input
+            label="Slack Incoming Webhook URL"
+            type="url"
+            value={form.slackWebhookUrl}
+            onChange={(event) =>
+              onChange({ ...form, slackWebhookUrl: event.target.value })
+            }
+            placeholder="https://hooks.slack.com/services/YOUR_WORKSPACE_ID/YOUR_CHANNEL_ID/YOUR_TOKEN"
+            required={form.actionType === "SLACK"}
+            disabled={busy}
+            description="Create an Incoming Webhook in your Slack channel and paste the URL here."
+          />
+        </div>
+      )}
+
+      {form.actionType === "TEAMS" && (
+        <div>
+          <Input
+            label="Microsoft Teams Connector Webhook URL"
+            type="url"
+            value={form.teamsWebhookUrl}
+            onChange={(event) =>
+              onChange({ ...form, teamsWebhookUrl: event.target.value })
+            }
+            placeholder="https://mycompany.webhook.office.com/webhookb2/XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX@XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/IncomingWebhook/XXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXX"
+            required={form.actionType === "TEAMS"}
+            disabled={busy}
+            description="Create an Incoming Webhook connector in MS Teams and paste the URL here."
+          />
+        </div>
       )}
 
       <div className="flex items-center gap-2 py-1">
