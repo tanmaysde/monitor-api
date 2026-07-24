@@ -1,8 +1,10 @@
 import nodemailer from "nodemailer";
+import axios from "axios";
 import {
   ActionContext,
   ActionType,
   EmailActionConfig,
+  WebhookActionConfig,
 } from "../types/action.types";
 
 const isObject = (value: unknown): value is Record<string, unknown> => {
@@ -18,6 +20,15 @@ const isEmailActionConfig = (config: unknown): config is EmailActionConfig => {
     config.subject.trim().length > 0 &&
     (config.text === undefined || typeof config.text === "string") &&
     (config.html === undefined || typeof config.html === "string")
+  );
+};
+
+const isWebhookActionConfig = (config: unknown): config is WebhookActionConfig => {
+  return (
+    isObject(config) &&
+    typeof config.url === "string" &&
+    config.url.trim().length > 0 &&
+    (config.headers === undefined || isObject(config.headers))
   );
 };
 
@@ -51,6 +62,33 @@ export const executeEmailAction = async (
   });
 };
 
+
+// * Executes a Webhook Action (POST request to custom URL)
+//  */
+export const executeWebhookAction = async (
+  config: WebhookActionConfig,
+  context: ActionContext
+) => {
+  // Construct the payload of data to send to the user's endpoint
+  const payload = {
+    event: context.trigger, // e.g. "API_DOWN" or "SLOW_RESPONSE"
+    monitorId: context.monitorId.toString(),
+    monitorName: context.monitorName || "Unknown monitor",
+    message: context.eventMessage || "No message",
+    workflowName: context.workflowName || "Unknown workflow",
+    triggeredAt: new Date().toISOString(),
+  };
+  // Perform the HTTP POST request to the custom URL
+  await axios.post(config.url, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(config.headers || {}), // Pass custom headers (e.g. bearer tokens for auth) if provided
+    },
+    timeout: 10000, // 10 seconds timeout limit so it doesn't hang
+  });
+};
+
+
 export const executeActionByType = async (
   type: ActionType,
   config: Record<string, unknown>,
@@ -62,6 +100,14 @@ export const executeActionByType = async (
     }
 
     await executeEmailAction(config, context);
+    return;
+  }
+
+   if (type === "WEBHOOK") {
+    if (!isWebhookActionConfig(config)) {
+      throw new Error("Invalid WEBHOOK action config");
+    }
+    await executeWebhookAction(config, context);
     return;
   }
 

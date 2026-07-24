@@ -79,16 +79,21 @@ export interface MonitorAnalyticsResponse {
   };
 }
 
-export interface WorkflowActionConfig {
+export interface EmailActionConfig {
   to: string;
   subject: string;
   text?: string;
   html?: string;
 }
 
+export interface WebhookActionConfig {
+  url: string;
+  headers?: Record<string, string>;
+}
+
 export interface WorkflowAction {
-  type: "EMAIL";
-  config: WorkflowActionConfig;
+  type: "EMAIL" | "WEBHOOK";
+  config: EmailActionConfig | WebhookActionConfig;
 }
 
 export interface Workflow {

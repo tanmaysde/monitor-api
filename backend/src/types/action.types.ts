@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { EventType } from "./event.types";
 
-export type ActionType = "EMAIL";
+export type ActionType = "EMAIL" | "WEBHOOK";
 
 export interface ActionContext {
   workflowId: Types.ObjectId;
@@ -19,4 +19,9 @@ export interface EmailActionConfig {
   subject: string;
   text?: string;
   html?: string;
+}
+
+export interface WebhookActionConfig {
+  url: string;
+  headers?: Record<string, string>; // Optional headers (e.g. Authorization keys)
 }

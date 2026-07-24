@@ -8,9 +8,14 @@ type WorkflowFormState = {
   name: string;
   trigger: EventType;
   enabled: boolean;
+  actionType: "EMAIL" | "WEBHOOK";
+  // Email configs
   to: string;
   subject: string;
   text: string;
+  // Webhook configs
+  webhookUrl: string;
+  webhookHeadersJson: string;
 };
 
 type WorkflowFormProps = {
@@ -57,7 +62,7 @@ export function WorkflowForm({
             onChange={(event) =>
               onChange({ ...form, name: event.target.value })
             }
-            placeholder="e.g. Email alerts on DOWN state"
+            placeholder="e.g. Alert dev channel on API DOWN"
             required
             disabled={busy}
             description="Give this workflow a descriptive label."
@@ -83,50 +88,110 @@ export function WorkflowForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input
-          label="Recipient Email (To)"
-          type="email"
-          value={form.to}
+      {/* Action Type Selector */}
+      <div>
+        <Select
+          label="Action Channel Type"
+          value={form.actionType}
           onChange={(event) =>
-            onChange({ ...form, to: event.target.value })
+            onChange({
+              ...form,
+              actionType: event.target.value as "EMAIL" | "WEBHOOK",
+            })
           }
-          placeholder="admin@example.com"
-          required
           disabled={busy}
-          description="Email address to send alert notifications to."
-        />
-        <Input
-          label="Subject Template"
-          value={form.subject}
-          onChange={(event) =>
-            onChange({ ...form, subject: event.target.value })
-          }
-          placeholder="Incident Alert: API is offline"
-          required
-          disabled={busy}
-          description="Subject line for email alert."
-        />
+          description="How alerts should be sent when triggered."
+        >
+          <option value="EMAIL">📧 Email Warning</option>
+          <option value="WEBHOOK">🔗 Webhook HTTP POST Alert</option>
+        </Select>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-semibold text-slate-500 dark:text-slate-450">
-          Email Body Template
-        </label>
-        <textarea
-          value={form.text}
-          onChange={(event) =>
-            onChange({ ...form, text: event.target.value })
-          }
-          placeholder="Write email markdown or plain text template here. Dynamic details are automatically mapped."
-          rows={4}
-          disabled={busy}
-          className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-150 placeholder:text-slate-450 dark:placeholder:text-slate-600 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-slate-900/50"
-        />
-        <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
-          Plain text body template sent in alert container.
-        </p>
-      </div>
+      {/* Conditional Inputs based on Action Type */}
+      {form.actionType === "EMAIL" ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Recipient Email (To)"
+              type="email"
+              value={form.to}
+              onChange={(event) =>
+                onChange({ ...form, to: event.target.value })
+              }
+              placeholder="admin@example.com"
+              required={form.actionType === "EMAIL"}
+              disabled={busy}
+              description="Email address to send alert notifications to."
+            />
+            <Input
+              label="Subject Template"
+              value={form.subject}
+              onChange={(event) =>
+                onChange({ ...form, subject: event.target.value })
+              }
+              placeholder="Incident Alert: API is offline"
+              required={form.actionType === "EMAIL"}
+              disabled={busy}
+              description="Subject line for email alert."
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-450">
+              Email Body Template
+            </label>
+            <textarea
+              value={form.text}
+              onChange={(event) =>
+                onChange({ ...form, text: event.target.value })
+              }
+              placeholder="Write email markdown or plain text template here."
+              rows={4}
+              disabled={busy}
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-150 placeholder:text-slate-450 dark:placeholder:text-slate-600 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-slate-900/50"
+            />
+            <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
+              Plain text body template sent in alert container.
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div>
+            <Input
+              label="Webhook Destination URL"
+              type="url"
+              value={form.webhookUrl}
+              onChange={(event) =>
+                onChange({ ...form, webhookUrl: event.target.value })
+              }
+              placeholder="https://api.mycompany.com/v1/monitor-alerts"
+              required={form.actionType === "WEBHOOK"}
+              disabled={busy}
+              description="The destination endpoint where we will send a POST request with error payload."
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-450">
+              Custom HTTP Headers (JSON format)
+            </label>
+            <textarea
+              value={form.webhookHeadersJson}
+              onChange={(event) =>
+                onChange({ ...form, webhookHeadersJson: event.target.value })
+              }
+              placeholder='e.g. { "Authorization": "Bearer custom-key", "X-Custom-Source": "api-monitor" }'
+              rows={3}
+              disabled={busy}
+              className="w-full px-3 py-2 font-mono text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-150 placeholder:text-slate-450 dark:placeholder:text-slate-600 disabled:opacity-50"
+            />
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              Pass authorization tokens or tracking headers. Set as empty object `{}` if none required.
+            </p>
+          </div>
+        </>
+      )}
 
       <div className="flex items-center gap-2 py-1">
         <input
@@ -139,7 +204,10 @@ export function WorkflowForm({
           disabled={busy}
           className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-brand-500 focus:ring-brand-500 bg-white dark:bg-slate-900"
         />
-        <label htmlFor="workflow-enabled-checkbox" className="text-xs font-semibold text-slate-650 dark:text-slate-350 cursor-pointer">
+        <label
+          htmlFor="workflow-enabled-checkbox"
+          className="text-xs font-semibold text-slate-650 dark:text-slate-350 cursor-pointer"
+        >
           Enable automatic scheduling for this workflow
         </label>
       </div>

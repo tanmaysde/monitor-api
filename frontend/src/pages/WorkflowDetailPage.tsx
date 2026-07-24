@@ -40,9 +40,12 @@ const emptyWorkflowForm = {
   name: "",
   trigger: "API_DOWN" as EventType,
   enabled: true,
+  actionType: "EMAIL" as "EMAIL" | "WEBHOOK",
   to: "",
   subject: "",
   text: "",
+  webhookUrl: "",
+  webhookHeadersJson: "{}",
 };
 
 export function WorkflowDetailPage() {
@@ -116,6 +119,26 @@ export function WorkflowDetailPage() {
     try {
       setBusy(true);
       setError("");
+      let actionConfig: any = {};
+      if (form.actionType === "EMAIL") {
+        actionConfig = {
+          to: form.to,
+          subject: form.subject,
+          text: form.text,
+        };
+      } else {
+        let headers = {};
+        try {
+          headers = JSON.parse(form.webhookHeadersJson || "{}");
+        } catch (e) {
+          throw new Error("Invalid custom headers JSON format. Please check JSON syntax.");
+        }
+        actionConfig = {
+          url: form.webhookUrl,
+          headers,
+        };
+      }
+
       const payload = {
         name: form.name,
         trigger: form.trigger,
@@ -123,12 +146,8 @@ export function WorkflowDetailPage() {
         conditions: [],
         actions: [
           {
-            type: "EMAIL" as const,
-            config: {
-              to: form.to,
-              subject: form.subject,
-              text: form.text,
-            },
+            type: form.actionType,
+            config: actionConfig,
           },
         ],
       };
@@ -199,15 +218,20 @@ export function WorkflowDetailPage() {
 
   function startEdit() {
     if (!selectedWorkflow) return;
-    const emailAction = selectedWorkflow.actions[0];
+    const action = selectedWorkflow.actions[0];
+    const isWebhook = action?.type === "WEBHOOK";
+
     setEditingWorkflowId(selectedWorkflow._id);
     setForm({
       name: selectedWorkflow.name,
       trigger: selectedWorkflow.trigger,
       enabled: selectedWorkflow.enabled,
-      to: emailAction?.config.to ?? "",
-      subject: emailAction?.config.subject ?? "",
-      text: emailAction?.config.text ?? "",
+      actionType: action?.type ?? "EMAIL",
+      to: !isWebhook ? (action?.config as any)?.to ?? "" : "",
+      subject: !isWebhook ? (action?.config as any)?.subject ?? "" : "",
+      text: !isWebhook ? (action?.config as any)?.text ?? "" : "",
+      webhookUrl: isWebhook ? (action?.config as any)?.url ?? "" : "",
+      webhookHeadersJson: isWebhook ? JSON.stringify((action?.config as any)?.headers ?? {}, null, 2) : "{}",
     });
     setIsAddModalOpen(true);
   }
@@ -238,9 +262,11 @@ export function WorkflowDetailPage() {
   // Filtering & Sorting Directory Workflows
   const filteredWorkflows = workflows
     .filter((w) => {
+      const action = w.actions[0];
+      const targetVal = action?.type === "EMAIL" ? (action.config as any)?.to : (action?.config as any)?.url;
       const matchSearch =
         w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        w.actions[0]?.config.to.toLowerCase().includes(searchQuery.toLowerCase());
+        (targetVal && targetVal.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchTrigger =
         triggerFilter === "ALL" || w.trigger === triggerFilter;
       return matchSearch && matchTrigger;
@@ -256,8 +282,12 @@ export function WorkflowDetailPage() {
         aVal = a.trigger;
         bVal = b.trigger;
       } else if (sortColumn === "recipient") {
-        aVal = (a.actions[0]?.config.to || "").toLowerCase();
-        bVal = (b.actions[0]?.config.to || "").toLowerCase();
+        const aAct = a.actions[0];
+        const bAct = b.actions[0];
+        const aTarget = aAct?.type === "EMAIL" ? (aAct.config as any)?.to : (aAct?.config as any)?.url;
+        const bTarget = bAct?.type === "EMAIL" ? (bAct.config as any)?.to : (bAct?.config as any)?.url;
+        aVal = (aTarget || "").toLowerCase();
+        bVal = (bTarget || "").toLowerCase();
       }
 
       if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
@@ -384,9 +414,9 @@ export function WorkflowDetailPage() {
                   Trigger Event <ChevronDown className="inline w-3 h-3 ml-0.5" />
                 </th>
                 <th className="px-5 py-3 cursor-pointer select-none" onClick={() => handleSort("recipient")}>
-                  Recipient Email <ChevronDown className="inline w-3 h-3 ml-0.5" />
+                  Alert Target <ChevronDown className="inline w-3 h-3 ml-0.5" />
                 </th>
-                <th className="px-5 py-3">Subject Template</th>
+                <th className="px-5 py-3">Detail / Subject</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -436,10 +466,18 @@ export function WorkflowDetailPage() {
                       {w.trigger}
                     </td>
                     <td className="px-5 py-3.5 font-mono text-[10px] text-slate-400 dark:text-slate-500">
-                      {w.actions[0]?.config.to || "—"}
+                      {w.actions[0]?.type === "EMAIL" ? (
+                        (w.actions[0]?.config as any)?.to || "—"
+                      ) : (
+                        <span className="text-brand-500 font-semibold">[Webhook] {(w.actions[0]?.config as any)?.url || "—"}</span>
+                      )}
                     </td>
-                    <td className="px-5 py-3.5 truncate max-w-[200px]" title={w.actions[0]?.config.subject}>
-                      {w.actions[0]?.config.subject || "—"}
+                    <td className="px-5 py-3.5 truncate max-w-[200px]" title={w.actions[0]?.type === "EMAIL" ? (w.actions[0]?.config as any)?.subject : "Custom Headers"}>
+                      {w.actions[0]?.type === "EMAIL" ? (
+                        (w.actions[0]?.config as any)?.subject || "—"
+                      ) : (
+                        `Headers: ${Object.keys((w.actions[0]?.config as any)?.headers || {}).join(", ") || "None"}`
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex justify-end gap-2.5">
@@ -573,7 +611,7 @@ export function WorkflowDetailPage() {
       </div>
     );
 
-    const emailAction = selectedWorkflow.actions[0];
+    const action = selectedWorkflow.actions[0];
     const successesCount = executions.filter((e) => e.status === "SUCCESS").length;
     const failuresCount = executions.filter((e) => e.status === "FAILED").length;
     const successRatio = executions.length > 0 ? Math.round((successesCount / executions.length) * 100) : 100;
@@ -611,11 +649,19 @@ export function WorkflowDetailPage() {
             trendType="neutral"
           />
           <StatCard
-            title="Recipient Mail"
-            value={emailAction?.config.to ? emailAction.config.to.split("@")[0] : "—"}
-            icon={<Mail className="w-5 h-5 text-slate-500" />}
-            description={emailAction?.config.to || "No email"}
-            trend="SMTP target"
+            title={action?.type === "EMAIL" ? "Recipient Mail" : "Webhook Target"}
+            value={
+              action?.type === "EMAIL"
+                ? ((action?.config as any)?.to ? (action.config as any).to.split("@")[0] : "—")
+                : ((action?.config as any)?.url ? "POST Request" : "—")
+            }
+            icon={action?.type === "EMAIL" ? <Mail className="w-5 h-5 text-slate-500" /> : <Terminal className="w-5 h-5 text-brand-500" />}
+            description={
+              action?.type === "EMAIL"
+                ? ((action?.config as any)?.to || "No email")
+                : ((action?.config as any)?.url || "No url")
+            }
+            trend={action?.type === "EMAIL" ? "SMTP target" : "HTTP POST webhook"}
             trendType="neutral"
           />
           <StatCard
@@ -634,21 +680,35 @@ export function WorkflowDetailPage() {
           />
         </div>
 
-        {/* Email Template Preview Pane */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-855 rounded-xl p-5 space-y-3 shadow-sm">
+        {/* Action Configuration Preview Pane */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-850 rounded-xl p-5 space-y-3 shadow-sm">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Email Payload Configuration
+            {action?.type === "EMAIL" ? "Email Payload Configuration" : "Webhook Destination Configuration"}
           </h3>
-          <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
-            <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex gap-4 text-slate-500">
-              <div className="font-mono">
-                <span className="font-bold">Subject:</span> {emailAction?.config.subject}
+          {action?.type === "EMAIL" ? (
+            <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
+              <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex gap-4 text-slate-500">
+                <div className="font-mono">
+                  <span className="font-bold">Subject:</span> {(action?.config as any)?.subject}
+                </div>
+              </div>
+              <div className="p-4 bg-white dark:bg-slate-900 min-h-[80px] font-mono text-slate-600 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">
+                {(action?.config as any)?.text || "No email body text configured."}
               </div>
             </div>
-            <div className="p-4 bg-white dark:bg-slate-900 min-h-[80px] font-mono text-slate-600 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">
-              {emailAction?.config.text || "No email body text configured."}
+          ) : (
+            <div className="border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden text-xs">
+              <div className="bg-slate-50/50 dark:bg-slate-950/60 px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-1 text-slate-500">
+                <div className="font-mono">
+                  <span className="font-bold">Webhook URL:</span> {(action?.config as any)?.url || "—"}
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50/30 dark:bg-slate-950/20 font-mono text-[11px] text-slate-650 dark:text-slate-400 whitespace-pre-wrap">
+                <span className="font-bold block mb-1">Custom Headers:</span>
+                {JSON.stringify((action?.config as any)?.headers || {}, null, 2)}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Execution Trail timeline */}

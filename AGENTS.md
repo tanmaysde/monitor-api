@@ -130,6 +130,11 @@ Still pending:
 - [ ] **Historical Log Exporter (CSV/JSON)**: Download button on check history to export logs in CSV format.
 - [ ] **Drag-and-Drop Visual Workflow Builder (React Flow)**: Build an n8n-like interactive canvas where users drag triggers (API Down, Slow Response) and link them to actions (Email, Webhook) visually.
 
+### 5. Application Observability & Error Tracking (Mini-Sentry)
+- [ ] **Exception Ingestion Endpoint & SDK**: Create a public API endpoint `/api/errors/ingest` and a small client-side SDK snippet to intercept browser errors and upload them to the backend.
+- [ ] **Intelligent Error Grouping (Issues)**: Hash error stack traces to group duplicate exceptions into unique "Issues", tracking frequency and occurrences.
+- [ ] **Issues Dashboard UI**: Build a React interface displaying active code crashes, parsed line numbers/files, and user agent statistics.
+
 
 extra:
 google login
@@ -137,4 +142,4 @@ otp login
 logout of all devices
 user edit
 profile page
-redis stream?
+redis stream?
