@@ -9,6 +9,7 @@ export const checkMonitor = async (url:string,method:string) =>{
       method:method as Method,
       timeout:10000,
       validateStatus:()=>true,
+      maxRedirects:0,
     })
 
     const responseTime = Date.now() - start;
