@@ -79,7 +79,7 @@ export const startMonitorWorker = () => {
     logger.info("BullMQ Worker started successfully and listening for jobs");
   });
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", (job: Job | undefined, err: Error) => {
     logger.error(`Job ${job?.id} failed with error: ${err.message}`);
   });
 };

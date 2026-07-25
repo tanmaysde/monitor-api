@@ -116,7 +116,7 @@ Still pending:
 
 ### 2. Core Enterprise SaaS Features
 - [ ] **Multi-Tenant Workspaces & Role-Based Access Control (RBAC)**: Team workspaces, member invitations, and permissions (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`).
-- [ ] **Additional Alert Channels (Slack & Discord Webhooks)**: Send rich alert messages directly to Slack channels or Discord webhooks when an API goes down.
+- [x] **Additional Alert Channels (Slack, Teams & Webhooks)**: Send rich alert messages directly to Slack channels, Microsoft Teams, or custom webhooks when an API goes down. (Completed)
 - [ ] **Automated Weekly PDF Reports**: Generate weekly PDF uptime reports and email them as attachments.
 
 ### 3. High-Performance Infrastructure
