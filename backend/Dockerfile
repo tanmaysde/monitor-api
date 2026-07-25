@@ -17,4 +17,4 @@ COPY --from=builder /app/dist ./dist
 # Open port 5000 for backend HTTP traffic
 EXPOSE 5000
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "--max-http-header-size=65536", "dist/server.js"]
