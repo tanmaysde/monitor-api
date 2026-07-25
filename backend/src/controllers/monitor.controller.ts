@@ -9,6 +9,7 @@ import { createMonitorEvents } from "../services/event.service";
 import redisClient from "../config/redis";
 import logger from "../utils/logger";
 import { checkSslCertificate } from "../services/ssl.service";
+import { addMonitorJob,removeMonitorJob } from "../jobs/monitor.queue";
 
 
 export const createMonitor = async (req: AuthRequest, res: Response) => {
@@ -17,6 +18,9 @@ export const createMonitor = async (req: AuthRequest, res: Response) => {
       ...req.body,
       userId: req.user.id,
     });
+
+    // Add repeatable job to Redis queue
+    await addMonitorJob(monitor._id.toString(), monitor.interval);
 
     res.status(201).json(monitor);
   } catch (error: any) {
@@ -50,13 +54,27 @@ export const getMonitorById = async (req: AuthRequest, res: Response) => {
 
 export const updateMonitor = async (req: AuthRequest, res: Response) => {
   try {
+    // 1. Fetch the monitor before updating to know its old interval
+    const oldMonitor = await Monitor.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!oldMonitor) {
+      return res.status(404).json({ message: "Monitor not found" });
+    }
+
+    // 2. Perform the update
     const monitor = await Monitor.findOneAndUpdate(
       { _id: req.params.id, userId: req.user.id },
       req.body,
       { returnDocument: "after", runValidators: true },
     );
+
     if (!monitor) {
       return res.status(404).json({ message: "Monitor not found" });
+    }
+
+    // 3. If the interval has changed, update the repeatable job in Redis
+    if (oldMonitor.interval !== monitor.interval) {
+      await removeMonitorJob(monitor._id.toString(), oldMonitor.interval);
+      await addMonitorJob(monitor._id.toString(), monitor.interval);
     }
 
     res.json(monitor);
@@ -65,21 +83,27 @@ export const updateMonitor = async (req: AuthRequest, res: Response) => {
   }
 };
 
+
 export const deleteMonitor = async (req: AuthRequest, res: Response) => {
   try {
     const monitor = await Monitor.findOneAndDelete({
       _id: req.params.id,
       userId: req.user.id,
     });
+
     if (!monitor) {
       return res.status(404).json({ message: "Monitor not found" });
     }
+
+    // Remove repeatable job from Redis queue
+    await removeMonitorJob(monitor._id.toString(), monitor.interval);
 
     res.json({ message: "Monitor deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 export const runMonitorCheck = async (req: AuthRequest, res: Response) => {
   try {

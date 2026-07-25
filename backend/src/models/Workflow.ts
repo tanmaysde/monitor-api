@@ -12,7 +12,7 @@ const workflowActionSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["EMAIL"],
+      enum: ["EMAIL", "WEBHOOK", "SLACK", "TEAMS"],
       required: true,
     },
     config: {

@@ -79,16 +79,29 @@ export interface MonitorAnalyticsResponse {
   };
 }
 
-export interface WorkflowActionConfig {
+export interface EmailActionConfig {
   to: string;
   subject: string;
   text?: string;
   html?: string;
 }
 
+export interface WebhookActionConfig {
+  url: string;
+  headers?: Record<string, string>;
+}
+
+export interface SlackActionConfig {
+  webhookUrl: string;
+}
+
+export interface TeamsActionConfig {
+  webhookUrl: string;
+}
+
 export interface WorkflowAction {
-  type: "EMAIL";
-  config: WorkflowActionConfig;
+  type: "EMAIL" | "WEBHOOK" | "SLACK" | "TEAMS";
+  config: EmailActionConfig | WebhookActionConfig | SlackActionConfig | TeamsActionConfig;
 }
 
 export interface Workflow {

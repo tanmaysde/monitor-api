@@ -7,9 +7,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn src/server.ts",
+    "dev": "node --max-http-header-size=32768 node_modules/ts-node-dev/lib/bin.js --respawn src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node --max-http-header-size=32768 dist/server.js"
   },
   "dependencies": {
     "axios": "^1.18.0",
