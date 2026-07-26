@@ -6,7 +6,7 @@ export interface IMonitor {
   url: string;
   method: string;
   interval: number;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId; 
   status: "UP" | "DOWN" | "UNKNOWN";
   lastCheckedAt?: Date;
   lastResponseTime?: number;

@@ -9,7 +9,7 @@ export interface WorkflowAction {
 
 export interface IWorkflow {
   name: string;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId;
   trigger: EventType;
   conditions: Record<string, unknown>[];
   actions: WorkflowAction[];

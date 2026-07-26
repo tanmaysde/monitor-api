@@ -30,9 +30,9 @@ const workflowSchema = new mongoose.Schema<IWorkflowDocument>(
       required: true,
       trim: true,
     },
-    userId: {
+    workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Workspace",
       required: true,
       index: true,
     },
