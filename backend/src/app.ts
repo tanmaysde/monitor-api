@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes";
 import workflowRoutes from "./routes/workflow.routes";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import workspaceRoutes from "./routes/workspace.routes";
 
 //rate limiting
 import rateLimit from "express-rate-limit";
@@ -80,8 +81,10 @@ app.get("/healthz", async (_req, res) => {
 
 //routes
 app.use("/api/auth",authRoutes)
+app.use("/api/workspaces", workspaceRoutes); 
 app.use("/api/monitors",monitorRoutes)
 app.use("/api/workflows", workflowRoutes);
+
 
 app.get("/",(_req,res)=>{
   res.send("API monitoring tool required")
