@@ -59,7 +59,7 @@ export function MonitorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
-  const { userRole } = useWorkspace();
+  const { userRole, activeWorkspaceId } = useWorkspace();
   const isViewer = userRole === "VIEWER";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -96,9 +96,9 @@ export function MonitorDetailPage() {
 
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !activeWorkspaceId) return;
     void loadPage(token, id);
-  }, [id, token]);
+  }, [id, token, activeWorkspaceId]);
 
   async function loadPage(currentToken: string, monitorId?: string) {
     try {

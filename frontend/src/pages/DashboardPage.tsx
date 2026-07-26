@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { api } from "../lib/api";
 import { Monitor, Workflow } from "../types";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -26,6 +27,7 @@ import {
 
 export function DashboardPage() {
   const { token } = useAuth();
+  const { activeWorkspaceId } = useWorkspace();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,9 +35,9 @@ export function DashboardPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !activeWorkspaceId) return;
     void loadOverview(token);
-  }, [token]);
+  }, [token, activeWorkspaceId]);
 
   async function loadOverview(currentToken: string) {
     try {

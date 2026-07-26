@@ -55,7 +55,7 @@ export function WorkflowDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
-  const { userRole } = useWorkspace();
+  const { userRole, activeWorkspaceId } = useWorkspace();
   const isViewer = userRole === "VIEWER";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -80,9 +80,9 @@ export function WorkflowDetailPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !activeWorkspaceId) return;
     void loadPage(token, id);
-  }, [id, token]);
+  }, [id, token, activeWorkspaceId]);
 
   async function loadPage(currentToken: string, workflowId?: string) {
     try {
