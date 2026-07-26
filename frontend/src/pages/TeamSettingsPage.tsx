@@ -52,6 +52,20 @@ export function TeamSettingsPage() {
     }
   };
 
+  const handleRoleChange = async (memberUserId: string, newRole: string) => {
+    if (!token || !activeWorkspace) return;
+
+    setError("");
+    setSuccess("");
+    try {
+      await api.updateWorkspaceMemberRole(token, activeWorkspace._id, memberUserId, newRole);
+      setSuccess("Member role updated successfully!");
+      fetchMembers();
+    } catch (err: any) {
+      setError(err.message || "Failed to update member role");
+    }
+  };
+
   const handleRemove = async (userId: string) => {
     if (!token || !activeWorkspace || !confirm("Are you sure you want to remove this member?")) return;
 
@@ -119,7 +133,7 @@ export function TeamSettingsPage() {
 
       {/* Members List */}
       <div className="border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-855">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-850">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
             <Shield className="w-4 h-4" /> Active Members ({members.length})
           </h3>
@@ -140,17 +154,29 @@ export function TeamSettingsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide ${
-                    member.role === "OWNER"
-                      ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
-                      : member.role === "ADMIN"
-                      ? "bg-brand-50 text-brand-700 dark:bg-brand-950/20 dark:text-brand-450"
-                      : member.role === "MEMBER"
-                      ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-350"
-                      : "bg-danger-50 text-danger-600 dark:bg-danger-950/20 dark:text-danger-400"
-                  }`}>
-                    {member.role}
-                  </span>
+                  {isAuthorized && member.role !== "OWNER" ? (
+                    <select
+                      value={member.role}
+                      onChange={(e) => handleRoleChange(profile._id, e.target.value)}
+                      className="text-[10px] font-bold bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 cursor-pointer focus:outline-none"
+                    >
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="MEMBER">MEMBER</option>
+                      <option value="VIEWER">VIEWER</option>
+                    </select>
+                  ) : (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wide ${
+                      member.role === "OWNER"
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
+                        : member.role === "ADMIN"
+                        ? "bg-brand-50 text-brand-700 dark:bg-brand-950/20 dark:text-brand-450"
+                        : member.role === "MEMBER"
+                        ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-350"
+                        : "bg-danger-50 text-danger-600 dark:bg-danger-950/20 dark:text-danger-400"
+                    }`}>
+                      {member.role}
+                    </span>
+                  )}
                   
                   {/* Delete button (only show for admins/owners, and never allow deleting OWNER) */}
                   {isAuthorized && member.role !== "OWNER" && (
