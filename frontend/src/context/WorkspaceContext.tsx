@@ -13,13 +13,14 @@ type Workspace = {
   _id: string;
   name: string;
   ownerId: string;
-  members: Array<{ userId: string; role: string }>;
+  members: Array<{ userId: any; role: string }>;
 };
 
 type WorkspaceContextValue = {
   workspaces: Workspace[];
   activeWorkspace: Workspace | null;
   activeWorkspaceId: string | null;
+  userRole: string | null;
   workspaceBusy: boolean;
   workspaceError: string;
   setActiveWorkspaceId: (id: string) => void;
@@ -32,7 +33,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 const WORKSPACE_ID_KEY = "api-monitor-workspace-id";
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(() =>
     localStorage.getItem(WORKSPACE_ID_KEY)
@@ -43,6 +44,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const activeWorkspace = useMemo(() => {
     return workspaces.find((w) => w._id === activeWorkspaceId) || workspaces[0] || null;
   }, [workspaces, activeWorkspaceId]);
+
+  const userRole = useMemo(() => {
+    if (!activeWorkspace || !user) return null;
+    const member = activeWorkspace.members.find(
+      (m) =>
+        m.userId === user.id ||
+        (typeof m.userId === "object" && m.userId !== null && m.userId._id === user.id)
+    );
+    return member ? member.role : null;
+  }, [activeWorkspace, user]);
 
   const setActiveWorkspaceId = (id: string) => {
     localStorage.setItem(WORKSPACE_ID_KEY, id);
@@ -103,13 +114,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       workspaces,
       activeWorkspace,
       activeWorkspaceId: activeWorkspace?._id || null,
+      userRole,
       workspaceBusy,
       workspaceError,
       setActiveWorkspaceId,
       loadWorkspaces,
       createWorkspace,
     }),
-    [workspaces, activeWorkspace, workspaceBusy, workspaceError]
+    [workspaces, activeWorkspace, userRole, workspaceBusy, workspaceError]
   );
 
   return (

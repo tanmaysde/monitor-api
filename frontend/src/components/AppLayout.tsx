@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { ThemeToggle } from "./ui/ThemeToggle";
 import { SearchBar } from "./ui/SearchBar";
 import {
@@ -13,7 +14,8 @@ import {
   Bell,
   Monitor as MonitorIcon,
   GitBranch,
-  LayoutDashboard
+  LayoutDashboard,
+  Users
 } from "lucide-react";
 
 export function AppLayout() {
@@ -59,6 +61,7 @@ export function AppLayout() {
     { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { to: "/monitors", label: "Monitors", icon: MonitorIcon },
     { to: "/workflows", label: "Workflows", icon: GitBranch },
+    { to: "/team", label: "Team Settings", icon: Users },
   ];
 
   return (

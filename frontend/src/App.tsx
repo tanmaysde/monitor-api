@@ -6,6 +6,7 @@ import { AuthPage } from "./pages/AuthPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { MonitorDetailPage } from "./pages/MonitorDetailPage";
 import { WorkflowDetailPage } from "./pages/WorkflowDetailPage";
+import { TeamSettingsPage } from "./pages/TeamSettingsPage";
 
 function App() {
   const { token } = useAuth();
@@ -28,6 +29,7 @@ function App() {
         <Route path="/monitors/:id" element={<MonitorDetailPage />} />
         <Route path="/workflows" element={<WorkflowDetailPage />} />
         <Route path="/workflows/:id" element={<WorkflowDetailPage />} />
+        <Route path="/team" element={<TeamSettingsPage />} />
       </Route>
       <Route
         path="*"
