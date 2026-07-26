@@ -37,6 +37,9 @@ export interface Monitor {
   sslInfo?: SSLInfo;
   createdAt: string;
   updatedAt: string;
+  retries?: number;
+  retryInterval?: number;
+
 }
 
 export interface MonitorLog {

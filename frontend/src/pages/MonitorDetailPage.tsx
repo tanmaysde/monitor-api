@@ -50,6 +50,8 @@ const emptyMonitorForm = {
   url: "http://localhost:3000/",
   method: "GET" as Monitor["method"],
   interval: 5,
+  retries: 3,
+  retryInterval: 10,
 };
 
 export function MonitorDetailPage() {
@@ -244,7 +246,7 @@ export function MonitorDetailPage() {
     }
   }
 
-  function startEdit() {
+    function startEdit() {
     if (!selectedMonitor) return;
     setEditingMonitorId(selectedMonitor._id);
     setForm({
@@ -252,9 +254,12 @@ export function MonitorDetailPage() {
       url: selectedMonitor.url,
       method: selectedMonitor.method,
       interval: selectedMonitor.interval,
+      retries: selectedMonitor.retries ?? 3,
+      retryInterval: selectedMonitor.retryInterval ?? 10,
     });
     setIsAddModalOpen(true);
   }
+
 
   function cancelEdit() {
     setEditingMonitorId("");

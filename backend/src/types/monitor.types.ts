@@ -11,4 +11,6 @@ export interface IMonitor {
   lastCheckedAt?: Date;
   lastResponseTime?: number;
   sslInfo?: ISSLInfo;
+  retries?: number;
+  retryInterval?: number;
 }

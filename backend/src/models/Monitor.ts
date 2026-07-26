@@ -21,6 +21,8 @@ const monitorSchema = new mongoose.Schema<IMonitorDocument>(
       uppercase: true,
    },
     interval: { type: Number, default: 5, min:[1,"Interval must be at least 1 minute"]},
+    retries: { type: Number, default: 3, min: 0, max: 5 },
+    retryInterval: { type: Number, default: 10, min: 5, max: 60 },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

@@ -1,7 +1,7 @@
 import { Worker, Job } from "bullmq";
 import Monitor from "../models/Monitor";
 import Log from "../models/Log";
-import { checkMonitor } from "../services/monitor.service";
+import { checkMonitorWithRetries } from "../services/monitor.retry.service";
 import { checkSslCertificate } from "../services/ssl.service";
 import { createMonitorEvents } from "../services/event.service";
 import logger from "../utils/logger";
@@ -31,8 +31,13 @@ export const startMonitorWorker = () => {
 
       try {
         // 3. Perform HTTP ping and SSL check in parallel (fast!)
-        const [result, sslInfo] = await Promise.all([
-          checkMonitor(monitor.url, monitor.method),
+                const [result, sslInfo] = await Promise.all([
+          checkMonitorWithRetries(
+            monitor.url,
+            monitor.method,
+            monitor.retries,
+            monitor.retryInterval
+          ),
           checkSslCertificate(monitor.url),
         ]);
 
