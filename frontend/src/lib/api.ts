@@ -75,7 +75,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const api = {
-  register: (input: { name: string; email: string; password: string }) =>
+  register: (input: { name: string; email: string; password: string; workspaceName?: string }) =>
     request<AuthResponse>("/auth/register", { method: "POST", body: input }),
 
   login: (input: { email: string; password: string }) =>

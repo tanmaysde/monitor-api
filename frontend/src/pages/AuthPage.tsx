@@ -13,6 +13,7 @@ export function AuthPage() {
     name: "",
     email: "",
     password: "",
+    workspaceName: "",
   });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -108,16 +109,27 @@ export function AuthPage() {
           {/* Form */}
           <form className="space-y-4" onSubmit={handleSubmit}>
             {authMode === "register" ? (
-              <Input
-                label="Full Name"
-                value={form.name}
-                onChange={(event) =>
-                  setForm((state) => ({ ...state, name: event.target.value }))
-                }
-                placeholder="Tanmay"
-                required
-                disabled={authBusy}
-              />
+              <>
+                <Input
+                  label="Full Name"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((state) => ({ ...state, name: event.target.value }))
+                  }
+                  placeholder="Tanmay"
+                  required
+                  disabled={authBusy}
+                />
+                <Input
+                  label="Initial Workspace Name (Optional)"
+                  value={form.workspaceName}
+                  onChange={(event) =>
+                    setForm((state) => ({ ...state, workspaceName: event.target.value }))
+                  }
+                  placeholder="My Awesome Team"
+                  disabled={authBusy}
+                />
+              </>
             ) : null}
 
             <Input

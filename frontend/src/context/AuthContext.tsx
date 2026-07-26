@@ -23,6 +23,7 @@ type AuthContextValue = {
     name: string;
     email: string;
     password: string;
+    workspaceName?: string;
   }) => Promise<AuthResponse>;
   completeAuth: (response: AuthResponse) => void;
   logout: () => void;
