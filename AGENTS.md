@@ -115,7 +115,7 @@ Still pending:
 - [ ] **Daily AI Incident Summary Emails**: A daily cron job that synthesizes 24-hour incident logs using Gemini and emails an executive status report.
 
 ### 2. Core Enterprise SaaS Features
-- [ ] **Multi-Tenant Workspaces & Role-Based Access Control (RBAC)**: Team workspaces, member invitations, and permissions (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`).
+- [x] **Multi-Tenant Workspaces & Role-Based Access Control (RBAC)**: Team workspaces, member invitations, and permissions (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`). (Completed)
 - [x] **Additional Alert Channels (Slack, Teams & Webhooks)**: Send rich alert messages directly to Slack channels, Microsoft Teams, or custom webhooks when an API goes down. (Completed)
 - [ ] **Automated Weekly PDF Reports**: Generate weekly PDF uptime reports and email them as attachments.
 
