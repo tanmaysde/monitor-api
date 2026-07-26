@@ -89,6 +89,27 @@ export function TeamSettingsPage() {
         </p>
       </div>
 
+      {/* Role Permission Reference Card */}
+      <div className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 rounded-xl space-y-2">
+        <h4 className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+          Workspace Permissions Guide
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+          <div>
+            <span className="font-bold text-slate-750 dark:text-slate-300 block text-xs">ADMIN</span>
+            Full access to Monitors & Workflows + invite team members and update roles.
+          </div>
+          <div>
+            <span className="font-bold text-slate-750 dark:text-slate-300 block text-xs">MEMBER</span>
+            Full access to Monitors & Workflows (write/update). Cannot manage team members.
+          </div>
+          <div>
+            <span className="font-bold text-slate-750 dark:text-slate-300 block text-xs">VIEWER</span>
+            Read-only access. Cannot create, edit, delete, or trigger manual checks.
+          </div>
+        </div>
+      </div>
+
       {error && <div className="p-3 text-xs text-danger-700 bg-danger-50 dark:bg-danger-950/20 rounded-md">{error}</div>}
       {success && <div className="p-3 text-xs text-brand-700 bg-brand-50 dark:bg-brand-950/20 rounded-md">{success}</div>}
 
