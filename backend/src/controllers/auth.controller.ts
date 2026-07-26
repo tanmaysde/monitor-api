@@ -76,13 +76,14 @@ export const registerUser = async (req:Request,res:Response) =>{
     setRefreshTokenCookie(res, refreshToken);
 
     res.status(201).json({
-        message:"User created successfully",
-        user:{
-          id:user._id,
-          name:user.name,
-          email:user.email
-        }
-      ,accessToken})
+      message: "User created successfully",
+      token: accessToken,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
 
    } catch (error:any) {
     res.status(500).json({message: error.message})
