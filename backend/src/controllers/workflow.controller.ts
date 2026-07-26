@@ -1,14 +1,14 @@
 import { Response } from "express";
 import Workflow from "../models/Workflow";
 import WorkflowExecution from "../models/WorkflowExecution";
-import { AuthRequest } from "../middlewares/auth";
+import { WorkspaceRequest } from "../middlewares/rbac";
 import {
   normalizeWorkflowActions,
   validateWorkflowActions,
 } from "../utils/actionValidation";
 import { runWorkflowTest } from "../services/workflow.service";
 
-export const createWorkflow = async (req: AuthRequest, res: Response) => {
+export const createWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
     const actionsError = validateWorkflowActions(req.body.actions || []);
     if (actionsError) {
@@ -18,7 +18,7 @@ export const createWorkflow = async (req: AuthRequest, res: Response) => {
     const workflow = await Workflow.create({
       ...req.body,
       actions: normalizeWorkflowActions(req.body.actions || []),
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     res.status(201).json(workflow);
@@ -27,9 +27,9 @@ export const createWorkflow = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getWorkflows = async (req: AuthRequest, res: Response) => {
+export const getWorkflows = async (req: WorkspaceRequest, res: Response) => {
   try {
-    const workflows = await Workflow.find({ userId: req.user.id }).sort({
+    const workflows = await Workflow.find({ workspaceId: req.workspace._id }).sort({
       createdAt: -1,
     });
 
@@ -39,7 +39,7 @@ export const getWorkflows = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateWorkflow = async (req: AuthRequest, res: Response) => {
+export const updateWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
     if (req.body.actions !== undefined) {
       const actionsError = validateWorkflowActions(req.body.actions);
@@ -53,7 +53,7 @@ export const updateWorkflow = async (req: AuthRequest, res: Response) => {
     const workflow = await Workflow.findOneAndUpdate(
       {
         _id: req.params.id,
-        userId: req.user.id,
+        workspaceId: req.workspace._id,
       },
       req.body,
       {
@@ -72,11 +72,11 @@ export const updateWorkflow = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteWorkflow = async (req: AuthRequest, res: Response) => {
+export const deleteWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
     const workflow = await Workflow.findOneAndDelete({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     if (!workflow) {
@@ -89,11 +89,11 @@ export const deleteWorkflow = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getWorkflowExecutions = async (req: AuthRequest, res: Response) => {
+export const getWorkflowExecutions = async (req: WorkspaceRequest, res: Response) => {
   try {
     const workflow = await Workflow.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     if (!workflow) {
@@ -107,11 +107,11 @@ export const getWorkflowExecutions = async (req: AuthRequest, res: Response) => 
       const skip = (page - 1) * limit;
 
       const [executions, total] = await Promise.all([
-        WorkflowExecution.find({ workflowId: workflow._id, userId: req.user.id })
+        WorkflowExecution.find({ workflowId: workflow._id, workspaceId: req.workspace._id })
           .sort({ executedAt: -1 })
           .skip(skip)
           .limit(limit),
-        WorkflowExecution.countDocuments({ workflowId: workflow._id, userId: req.user.id })
+        WorkflowExecution.countDocuments({ workflowId: workflow._id, workspaceId: req.workspace._id })
       ]);
 
       return res.json({
@@ -127,7 +127,7 @@ export const getWorkflowExecutions = async (req: AuthRequest, res: Response) => 
 
     const executions = await WorkflowExecution.find({
       workflowId: workflow._id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     }).sort({ executedAt: -1 });
 
     res.json(executions);
@@ -136,12 +136,11 @@ export const getWorkflowExecutions = async (req: AuthRequest, res: Response) => 
   }
 };
 
-
-export const testWorkflow = async (req: AuthRequest, res: Response) => {
+export const testWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
     const workflow = await Workflow.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     if (!workflow) {

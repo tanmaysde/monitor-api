@@ -4,14 +4,14 @@ import { ILog } from "../types/log.types";
 export interface ILogDocument extends ILog, Document {}
 
 const logSchema = new mongoose.Schema<ILogDocument>(
-{monitorId: {
+    {monitorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Monitor",
       required: true,
     },
-    userId: {
+    workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Workspace",
       required: true,
     },
     status: {
@@ -39,7 +39,7 @@ const logSchema = new mongoose.Schema<ILogDocument>(
 );
 
 // 1. Compound Index: Optimizes queries filtering by monitor + user and sorting by date
-logSchema.index({ monitorId: 1, userId: 1, checkedAt: -1 });
+logSchema.index({ monitorId: 1, workspaceId: 1, checkedAt: -1 });
 
 // 2. TTL Index: Automatically deletes log documents older than 30 days (value in seconds)
 logSchema.index({ checkedAt: 1 }, { expireAfterSeconds: 2592000 });

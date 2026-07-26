@@ -51,7 +51,7 @@ export const startMonitorWorker = () => {
         // 5. Create a check history log entry
         await Log.create({
           monitorId: monitor._id,
-          userId: monitor.userId,
+          workspaceId: monitor.workspaceId, 
           status: result.status,
           responseTime: result.responseTime,
           statusCode: result.statusCode,
@@ -62,7 +62,7 @@ export const startMonitorWorker = () => {
         // 6. Fire system events if status changed (e.g. UP -> DOWN)
         await createMonitorEvents({
           monitorId: monitor._id,
-          userId: monitor.userId,
+          workspaceId: monitor.workspaceId, 
           monitorName: monitor.name,
           previousStatus,
           result,

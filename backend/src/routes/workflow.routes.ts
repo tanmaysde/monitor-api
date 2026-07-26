@@ -1,5 +1,7 @@
 import { Router } from "express";
 import auth from "../middlewares/auth";
+import { checkWorkspaceRole } from "../middlewares/rbac";
+
 import {
   createWorkflow,
   getWorkflows,
@@ -11,11 +13,12 @@ import {
 
 const router = Router();
 
-router.post("/", auth, createWorkflow);
-router.get("/", auth, getWorkflows);
-router.put("/:id", auth, updateWorkflow);
-router.delete("/:id", auth, deleteWorkflow);
-router.get("/:id/executions", auth, getWorkflowExecutions);
-router.post("/:id/test", auth, testWorkflow);
+router.post("/", auth, checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER"]), createWorkflow);
+router.get("/", auth, checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER", "VIEWER"]), getWorkflows);
+router.put("/:id", auth, checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER"]), updateWorkflow);
+router.delete("/:id", auth, checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER"]), deleteWorkflow);
+router.get("/:id/executions", auth, checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER", "VIEWER"]), getWorkflowExecutions);
+router.post("/:id/test", auth, checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER"]), testWorkflow);
+
 
 export default router;

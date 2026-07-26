@@ -10,9 +10,9 @@ const eventSchema = new mongoose.Schema<IEventDocument>(
       ref: "Monitor",
       required: true,
     },
-    userId: {
+    workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Workspace",
       required: true,
     },
     type: {
@@ -47,7 +47,7 @@ const eventSchema = new mongoose.Schema<IEventDocument>(
 
 
 // 1. Compound Index: Optimizes query sorting by event triggers
-eventSchema.index({ monitorId: 1, userId: 1, triggeredAt: -1 });
+eventSchema.index({ monitorId: 1, workspaceId: 1, triggeredAt: -1 });
 
 // 2. TTL Index: Automatically deletes event alerts older than 30 days
 eventSchema.index({ triggeredAt: 1 }, { expireAfterSeconds: 2592000 });

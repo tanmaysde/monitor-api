@@ -6,7 +6,7 @@ export interface IWorkflowExecution {
   workflowId: Types.ObjectId;
   eventId: Types.ObjectId;
   monitorId: Types.ObjectId;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId;
   trigger: EventType;
   status: "SUCCESS" | "FAILED";
   actions: WorkflowAction[];
@@ -52,9 +52,9 @@ const workflowExecutionSchema = new mongoose.Schema<IWorkflowExecutionDocument>(
       ref: "Monitor",
       required: true,
     },
-    userId: {
+    workspaceId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Workspace",
       required: true,
       index: true,
     },
