@@ -28,6 +28,12 @@ router.put(
   checkWorkspaceRole(["OWNER", "ADMIN"]),
   updateWorkspaceMemberRole
 );
+router.post(
+  "/:workspaceId/members",
+  auth,
+  checkWorkspaceRole(["OWNER", "ADMIN"]),
+  inviteWorkspaceMember
+);
 router.delete(
   "/:workspaceId/members/:memberUserId",
   auth,
