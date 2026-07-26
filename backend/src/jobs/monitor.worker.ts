@@ -1,7 +1,7 @@
 import { Worker, Job } from "bullmq";
 import Monitor from "../models/Monitor";
 import Log from "../models/Log";
-import { checkMonitor } from "../services/monitor.service";
+import { checkMonitorWithRetries } from "../services/monitor.retry.service";
 import { checkSslCertificate } from "../services/ssl.service";
 import { createMonitorEvents } from "../services/event.service";
 import logger from "../utils/logger";
@@ -31,8 +31,13 @@ export const startMonitorWorker = () => {
 
       try {
         // 3. Perform HTTP ping and SSL check in parallel (fast!)
-        const [result, sslInfo] = await Promise.all([
-          checkMonitor(monitor.url, monitor.method),
+                const [result, sslInfo] = await Promise.all([
+          checkMonitorWithRetries(
+            monitor.url,
+            monitor.method,
+            monitor.retries,
+            monitor.retryInterval
+          ),
           checkSslCertificate(monitor.url),
         ]);
 
@@ -46,7 +51,7 @@ export const startMonitorWorker = () => {
         // 5. Create a check history log entry
         await Log.create({
           monitorId: monitor._id,
-          userId: monitor.userId,
+          workspaceId: monitor.workspaceId, 
           status: result.status,
           responseTime: result.responseTime,
           statusCode: result.statusCode,
@@ -57,7 +62,7 @@ export const startMonitorWorker = () => {
         // 6. Fire system events if status changed (e.g. UP -> DOWN)
         await createMonitorEvents({
           monitorId: monitor._id,
-          userId: monitor.userId,
+          workspaceId: monitor.workspaceId, 
           monitorName: monitor.name,
           previousStatus,
           result,

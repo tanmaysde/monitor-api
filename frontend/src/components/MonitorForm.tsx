@@ -9,6 +9,8 @@ type MonitorFormState = {
   url: string;
   method: Monitor["method"];
   interval: number;
+  retries: number;
+  retryInterval: number;
 };
 
 type MonitorFormProps = {
@@ -113,6 +115,39 @@ export function MonitorForm({
           />
         </div>
       </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Input
+            label="Retry Attempts"
+            type="number"
+            min={0}
+            max={5}
+            value={form.retries}
+            onChange={(event) =>
+              onChange({ ...form, retries: Number(event.target.value) })
+            }
+            required
+            disabled={busy}
+            description="Failed checks will be retried this many times before declaring DOWN."
+          />
+        </div>
+        <div>
+          <Input
+            label="Retry Interval (seconds)"
+            type="number"
+            min={5}
+            max={60}
+            value={form.retryInterval}
+            onChange={(event) =>
+              onChange({ ...form, retryInterval: Number(event.target.value) })
+            }
+            required
+            disabled={busy}
+            description="Wait time in seconds between retry attempts."
+          />
+        </div>
+      </div>
+
 
       <div className="flex justify-end gap-3 pt-3">
         <Button

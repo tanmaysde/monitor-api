@@ -13,7 +13,7 @@ type CheckResult = {
 
 type CreateMonitorEventsInput = {
   monitorId: Types.ObjectId;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId; 
   monitorName: string;
   previousStatus: MonitorStatus;
   result: CheckResult;
@@ -23,7 +23,7 @@ const SLOW_RESPONSE_THRESHOLD = 1000;
 
 export const createMonitorEvents = async ({
   monitorId,
-  userId,
+  workspaceId,
   monitorName,
   previousStatus,
   result,
@@ -33,7 +33,7 @@ export const createMonitorEvents = async ({
   if (previousStatus !== "DOWN" && result.status === "DOWN") {
     events.push({
       monitorId,
-      userId,
+      workspaceId,
       type: "API_DOWN",
       message: `${monitorName} is down`,
       previousStatus,
@@ -46,7 +46,7 @@ export const createMonitorEvents = async ({
   if (previousStatus === "DOWN" && result.status === "UP") {
     events.push({
       monitorId,
-      userId,
+      workspaceId,
       type: "API_UP",
       message: `${monitorName} is back up`,
       previousStatus,
@@ -59,7 +59,7 @@ export const createMonitorEvents = async ({
   if (result.status === "UP" && result.responseTime > SLOW_RESPONSE_THRESHOLD) {
     events.push({
       monitorId,
-      userId,
+      workspaceId,
       type: "SLOW_RESPONSE",
       message: `${monitorName} responded slowly`,
       previousStatus,
@@ -79,7 +79,7 @@ export const createMonitorEvents = async ({
     await runWorkflowsForEvent({
       eventId: event._id as Types.ObjectId,
       monitorId: event.monitorId,
-      userId: event.userId,
+      workspaceId: event.workspaceId,
       type: event.type as EventType,
       monitorName,
       eventMessage: event.message,

@@ -7,7 +7,7 @@ export interface ActionContext {
   workflowId: Types.ObjectId;
   eventId: Types.ObjectId;
   monitorId: Types.ObjectId;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId;
   trigger: EventType;
   workflowName?: string;
   monitorName?: string;

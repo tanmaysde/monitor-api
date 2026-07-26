@@ -21,13 +21,14 @@ type RequestOptions = {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   // Always read latest token from localStorage if not explicitly passed
   const currentToken = options.token ?? localStorage.getItem("api-monitor-token");
+  const activeWorkspaceId = localStorage.getItem("api-monitor-workspace-id"); // ⚡ ADD THIS LINE HERE
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
       ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {}),
+      ...(activeWorkspaceId ? { "x-workspace-id": activeWorkspaceId } : {}), // ⚡ ADD THIS
     },
-    // CRITICAL: Tells the browser to send cookies (httpOnly Refresh Token) to backend
     credentials: "include", 
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
@@ -142,4 +143,17 @@ export const api = {
 
   getWorkflowExecutions: (token: string, id: string) =>
     request<WorkflowExecution[]>(`/workflows/${id}/executions`, { token }),
+
+    getWorkspaces: (token: string) => request<any[]>("/workspaces", { token }),
+  createWorkspace: (token: string, name: string) =>
+    request<any>("/workspaces", { method: "POST", token, body: { name } }),
+  getWorkspaceMembers: (token: string, workspaceId: string) =>
+    request<any>(`/workspaces/${workspaceId}`, { token }),
+  inviteWorkspaceMember: (token: string, workspaceId: string, email: string, role: string) =>
+    request<any>(`/workspaces/${workspaceId}/members`, { method: "POST", token, body: { email, role } }),
+  updateWorkspaceMemberRole: (token: string, workspaceId: string, memberUserId: string, role: string) =>
+    request<any>(`/workspaces/${workspaceId}/members/${memberUserId}`, { method: "PUT", token, body: { role } }),
+  removeWorkspaceMember: (token: string, workspaceId: string, memberUserId: string) =>
+    request<any>(`/workspaces/${workspaceId}/members/${memberUserId}`, { method: "DELETE", token }),
+
 };

@@ -10,7 +10,7 @@ import { executeActionByType } from "./action.service";
 type WorkflowEventInput = {
   eventId: Types.ObjectId;
   monitorId: Types.ObjectId;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId
   type: EventType;
   monitorName?: string;
   eventMessage?: string;
@@ -24,7 +24,7 @@ type ExecuteWorkflowInput = {
   };
   eventId: Types.ObjectId;
   monitorId: Types.ObjectId;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId
   trigger: EventType;
   monitorName?: string;
   eventMessage?: string;
@@ -48,7 +48,7 @@ const executeWorkflow = async ({
   workflow,
   eventId,
   monitorId,
-  userId,
+  workspaceId,
   trigger,
   monitorName,
   eventMessage,
@@ -68,7 +68,7 @@ const executeWorkflow = async ({
         workflowId: workflow._id,
         eventId,
         monitorId,
-        userId,
+        workspaceId,
         trigger,
         workflowName: workflow.name,
         monitorName,
@@ -80,7 +80,7 @@ const executeWorkflow = async ({
       workflowId: workflow._id,
       eventId,
       monitorId,
-      userId,
+      workspaceId,
       trigger,
       status: "SUCCESS",
       actions: validActions,
@@ -92,7 +92,7 @@ const executeWorkflow = async ({
       workflowId: workflow._id,
       eventId,
       monitorId,
-      userId,
+      workspaceId,
       trigger,
       status: "FAILED",
       actions: validActions,
@@ -104,7 +104,7 @@ const executeWorkflow = async ({
 
 export const runWorkflowsForEvent = async (event: WorkflowEventInput) => {
   const workflows = await Workflow.find({
-    userId: event.userId,
+    workspaceId: event.workspaceId,
     trigger: event.type,
     enabled: true,
   });
@@ -120,7 +120,7 @@ export const runWorkflowsForEvent = async (event: WorkflowEventInput) => {
       },
       eventId: event.eventId,
       monitorId: event.monitorId,
-      userId: event.userId,
+      workspaceId: event.workspaceId,
       trigger: event.type,
       monitorName: event.monitorName,
       eventMessage: event.eventMessage,
@@ -147,7 +147,7 @@ export const runWorkflowTest = async (workflowId: Types.ObjectId) => {
     },
     eventId: new Types.ObjectId(),
     monitorId: new Types.ObjectId(),
-    userId: workflow.userId,
+    workspaceId: workflow.workspaceId,
     trigger: workflow.trigger,
     monitorName: "Manual Test Monitor",
     eventMessage: `Manual test run for workflow "${workflow.name}"`,

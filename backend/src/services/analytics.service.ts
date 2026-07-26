@@ -3,16 +3,16 @@ import Log from "../models/Log";
 
 export const calculateMonitorAnalytics = async (
   monitorId: string,
-  userId: string,
+  workspaceId: string,
 ) => {
   const monitorObjectId = new Types.ObjectId(monitorId);
-  const userObjectId = new Types.ObjectId(userId);
+  const workspaceObjectId = new Types.ObjectId(workspaceId);
 
   const [summary] = await Log.aggregate([
     {
       $match: {
         monitorId: monitorObjectId,
-        userId: userObjectId,
+        workspaceId: workspaceObjectId,
       },
     },
     {

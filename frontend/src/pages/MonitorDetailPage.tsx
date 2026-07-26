@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MonitorForm } from "../components/MonitorForm";
 import { useAuth } from "../context/AuthContext";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { api } from "../lib/api";
 import {
   Monitor,
@@ -50,12 +51,16 @@ const emptyMonitorForm = {
   url: "http://localhost:3000/",
   method: "GET" as Monitor["method"],
   interval: 5,
+  retries: 3,
+  retryInterval: 10,
 };
 
 export function MonitorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
+  const { userRole } = useWorkspace();
+  const isViewer = userRole === "VIEWER";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
@@ -244,7 +249,7 @@ export function MonitorDetailPage() {
     }
   }
 
-  function startEdit() {
+    function startEdit() {
     if (!selectedMonitor) return;
     setEditingMonitorId(selectedMonitor._id);
     setForm({
@@ -252,9 +257,12 @@ export function MonitorDetailPage() {
       url: selectedMonitor.url,
       method: selectedMonitor.method,
       interval: selectedMonitor.interval,
+      retries: selectedMonitor.retries ?? 3,
+      retryInterval: selectedMonitor.retryInterval ?? 10,
     });
     setIsAddModalOpen(true);
   }
+
 
   function cancelEdit() {
     setEditingMonitorId("");
@@ -340,18 +348,20 @@ export function MonitorDetailPage() {
           eyebrow="Directory"
           description="Manage checker endpoints, configure polling, and inspect latency signals."
           actions={
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setEditingMonitorId("");
-                setForm(emptyMonitorForm);
-                setIsAddModalOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Monitor
-            </Button>
+            !isViewer ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setEditingMonitorId("");
+                  setForm(emptyMonitorForm);
+                  setIsAddModalOpen(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Monitor
+              </Button>
+            ) : undefined
           }
         />
 
@@ -645,15 +655,19 @@ export function MonitorDetailPage() {
         <Button variant="secondary" size="sm" onClick={() => navigate("/monitors")}>
           <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Directory
         </Button>
-        <Button variant="secondary" size="sm" onClick={handleManualCheck} disabled={busy}>
+        <Button variant="secondary" size="sm" onClick={handleManualCheck} disabled={busy || isViewer}>
           <Play className="w-3.5 h-3.5 mr-1.5" /> Check Now
         </Button>
-        <Button variant="secondary" size="sm" onClick={startEdit}>
-          <Settings className="w-3.5 h-3.5 mr-1.5" /> Edit
-        </Button>
-        <Button variant="danger" size="sm" onClick={() => setIsDeleteConfirmOpen(true)}>
-          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
-        </Button>
+        {!isViewer && (
+          <>
+            <Button variant="secondary" size="sm" onClick={startEdit}>
+              <Settings className="w-3.5 h-3.5 mr-1.5" /> Edit
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setIsDeleteConfirmOpen(true)}>
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+            </Button>
+          </>
+        )}
       </div>
     );
 

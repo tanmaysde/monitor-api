@@ -2,6 +2,8 @@ import { Request,Response } from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import bcrypt from "bcryptjs"
+import Workspace from "../models/Workspace";
+
 
 
 // Update this function at the top of auth.controller.ts:
@@ -50,6 +52,17 @@ export const registerUser = async (req:Request,res:Response) =>{
       email,
       password: hashedPassword,
       tokenVersion: 0,
+    });
+
+    await Workspace.create({
+      name: `${user.name}'s Workspace`,
+      ownerId: user._id,
+      members: [
+        {
+          userId: user._id,
+          role: "OWNER",
+        },
+      ],
     });
 
     const accessToken = generateAccessToken({ 

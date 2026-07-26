@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 
 export interface ILog {
   monitorId: Types.ObjectId;
-  userId: Types.ObjectId;
+  workspaceId: Types.ObjectId;
   status: "UP" | "DOWN";
   responseTime: number;
   statusCode?: number;

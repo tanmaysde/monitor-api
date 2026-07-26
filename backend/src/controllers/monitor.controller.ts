@@ -10,13 +10,15 @@ import redisClient from "../config/redis";
 import logger from "../utils/logger";
 import { checkSslCertificate } from "../services/ssl.service";
 import { addMonitorJob,removeMonitorJob } from "../jobs/monitor.queue";
+import { checkMonitorWithRetries } from "../services/monitor.retry.service";
 
+import { WorkspaceRequest } from "../middlewares/rbac";
 
-export const createMonitor = async (req: AuthRequest, res: Response) => {
+export const createMonitor = async (req: WorkspaceRequest, res: Response) => {
   try {
     const monitor = await Monitor.create({
       ...req.body,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     // Add repeatable job to Redis queue
@@ -28,20 +30,20 @@ export const createMonitor = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getMonitors = async (req: AuthRequest, res: Response) => {
+export const getMonitors = async (req: WorkspaceRequest, res: Response) => {
   try {
-    const monitors = await Monitor.find({ userId: req.user.id });
+    const monitors = await Monitor.find({  workspaceId: req.workspace._id });
     res.json(monitors);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
 
-export const getMonitorById = async (req: AuthRequest, res: Response) => {
+export const getMonitorById = async (req: WorkspaceRequest, res: Response) => {
   try {
     const monitor = await Monitor.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id
     });
     if (!monitor) {
       return res.status(404).json({ message: "monitor not found" });
@@ -52,17 +54,17 @@ export const getMonitorById = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateMonitor = async (req: AuthRequest, res: Response) => {
+export const updateMonitor = async (req: WorkspaceRequest, res: Response) => {
   try {
     // 1. Fetch the monitor before updating to know its old interval
-    const oldMonitor = await Monitor.findOne({ _id: req.params.id, userId: req.user.id });
+    const oldMonitor = await Monitor.findOne({ _id: req.params.id, workspaceId: req.workspace._id });
     if (!oldMonitor) {
       return res.status(404).json({ message: "Monitor not found" });
     }
 
     // 2. Perform the update
     const monitor = await Monitor.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, workspaceId: req.workspace._id },
       req.body,
       { returnDocument: "after", runValidators: true },
     );
@@ -84,11 +86,11 @@ export const updateMonitor = async (req: AuthRequest, res: Response) => {
 };
 
 
-export const deleteMonitor = async (req: AuthRequest, res: Response) => {
+export const deleteMonitor = async (req: WorkspaceRequest, res: Response) => {
   try {
     const monitor = await Monitor.findOneAndDelete({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id
     });
 
     if (!monitor) {
@@ -105,11 +107,11 @@ export const deleteMonitor = async (req: AuthRequest, res: Response) => {
 };
 
 
-export const runMonitorCheck = async (req: AuthRequest, res: Response) => {
+export const runMonitorCheck = async (req: WorkspaceRequest, res: Response) => {
   try {
     const monitor = await Monitor.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id
     });
 
     if (!monitor) {
@@ -118,9 +120,15 @@ export const runMonitorCheck = async (req: AuthRequest, res: Response) => {
 
     const previousStatus = monitor.status;
     const [result, sslInfo] = await Promise.all([
-      checkMonitor(monitor.url, monitor.method),
+      checkMonitorWithRetries(
+        monitor.url,
+        monitor.method,
+        monitor.retries,
+        monitor.retryInterval
+      ),
       checkSslCertificate(monitor.url),
     ]);
+
 
     monitor.status = result.status;
     monitor.lastCheckedAt = result.checkedAt;
@@ -131,7 +139,7 @@ export const runMonitorCheck = async (req: AuthRequest, res: Response) => {
 
     await Log.create({
       monitorId: monitor._id,
-      userId: monitor.userId,
+      workspaceId: monitor.workspaceId,
       status: result.status,
       responseTime: result.responseTime,
       statusCode: result.statusCode,
@@ -141,7 +149,7 @@ export const runMonitorCheck = async (req: AuthRequest, res: Response) => {
 
     const events = await createMonitorEvents({
       monitorId: monitor._id,
-      userId: monitor.userId,
+      workspaceId: req.workspace._id,
       monitorName: monitor.name,
       previousStatus,
       result,
@@ -163,10 +171,16 @@ export const runAllMonitorChecks = async () => {
     const monitors = await Monitor.find();
     for (const monitor of monitors) {
       const previousStatus = monitor.status;
-      const [result, sslInfo] = await Promise.all([
-      checkMonitor(monitor.url, monitor.method),
+          const [result, sslInfo] = await Promise.all([
+      checkMonitorWithRetries(
+        monitor.url,
+        monitor.method,
+        monitor.retries,
+        monitor.retryInterval
+      ),
       checkSslCertificate(monitor.url),
     ]);
+
 
       monitor.status = result.status;
       monitor.lastCheckedAt = result.checkedAt;
@@ -177,7 +191,7 @@ export const runAllMonitorChecks = async () => {
 
       await Log.create({
         monitorId: monitor._id,
-        userId: monitor.userId,
+        workspaceId: monitor.workspaceId,
         status: result.status,
         responseTime: result.responseTime,
         statusCode: result.statusCode,
@@ -186,7 +200,7 @@ export const runAllMonitorChecks = async () => {
       });
       await createMonitorEvents({
         monitorId: monitor._id,
-        userId: monitor.userId,
+        workspaceId: monitor.workspaceId,
         monitorName: monitor.name,
         previousStatus,
         result,
@@ -198,11 +212,11 @@ export const runAllMonitorChecks = async () => {
   }
 };
 
-export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
+export const getMonitorLogs = async (req: WorkspaceRequest, res: Response) => {
   try {
     const monitor = await Monitor.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     if (!monitor) {
@@ -218,11 +232,11 @@ export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
 
       // 2. Fetch the records and count total items in parallel (fast)
       const [logs, total] = await Promise.all([
-        Log.find({ monitorId: monitor._id, userId: req.user.id })
+        Log.find({ monitorId: monitor._id, workspaceId: req.workspace._id })
           .sort({ checkedAt: -1 })
           .skip(skip)
           .limit(limit),
-        Log.countDocuments({ monitorId: monitor._id, userId: req.user.id })
+        Log.countDocuments({ monitorId: monitor._id, workspaceId: req.workspace._id })
       ]);
 
       // 3. Return the new paginated envelope
@@ -240,7 +254,7 @@ export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
     // 4. Default fallback: Return the array (Backward compatibility for frontend)
     const logs = await Log.find({
       monitorId: monitor._id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     }).sort({ checkedAt: -1 });
 
     res.json(logs);
@@ -250,14 +264,14 @@ export const getMonitorLogs = async (req: AuthRequest, res: Response) => {
 };
 
 
-export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
+export const getMonitorAnalytics = async (req: WorkspaceRequest, res: Response) => {
   try {
 
     const monitorId = req.params.id;
-    const userId = req.user.id;
+    const workspaceId = req.workspace._id.toString();
     
     // 1. Define a unique Cache Key for this user + monitor
-    const cacheKey = `monitor:analytics:${monitorId}:${userId}`;
+    const cacheKey = `monitor:analytics:${monitorId}:${workspaceId}`;
 
     // 2. Look up the cache key in Redis
     const cachedAnalytics = await redisClient.get(cacheKey);
@@ -273,7 +287,7 @@ export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
     logger.info(`Cache MISS for key: ${cacheKey}. Querying database...`);
     const monitor = await Monitor.findOne({
       _id: monitorId,
-      userId: userId,
+      workspaceId: req.workspace._id,
     });
 
     if (!monitor) {
@@ -282,7 +296,7 @@ export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
 
    const analytics = await calculateMonitorAnalytics(
       String(monitorId),
-      userId,
+      workspaceId,
     );
 
     const payload = {
@@ -304,11 +318,11 @@ export const getMonitorAnalytics = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getMonitorEvents = async (req: AuthRequest, res: Response) => {
+export const getMonitorEvents = async (req: WorkspaceRequest, res: Response) => {
   try {
     const monitor = await Monitor.findOne({
       _id: req.params.id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     });
 
     if (!monitor) {
@@ -322,11 +336,11 @@ export const getMonitorEvents = async (req: AuthRequest, res: Response) => {
       const skip = (page - 1) * limit;
 
       const [events, total] = await Promise.all([
-        Event.find({ monitorId: monitor._id, userId: req.user.id })
+        Event.find({ monitorId: monitor._id, workspaceId: req.workspace._id })
           .sort({ triggeredAt: -1 })
           .skip(skip)
           .limit(limit),
-        Event.countDocuments({ monitorId: monitor._id, userId: req.user.id })
+        Event.countDocuments({ monitorId: monitor._id, workspaceId: req.workspace._id })
       ]);
 
       return res.json({
@@ -342,7 +356,7 @@ export const getMonitorEvents = async (req: AuthRequest, res: Response) => {
 
     const events = await Event.find({
       monitorId: monitor._id,
-      userId: req.user.id,
+      workspaceId: req.workspace._id,
     }).sort({ triggeredAt: -1 });
 
     res.json(events);

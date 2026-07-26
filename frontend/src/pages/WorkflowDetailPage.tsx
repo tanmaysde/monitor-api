@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { WorkflowForm } from "../components/WorkflowForm";
 import { useAuth } from "../context/AuthContext";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { api } from "../lib/api";
 import { EventType, Workflow, WorkflowExecution } from "../types";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -54,6 +55,8 @@ export function WorkflowDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
+  const { userRole } = useWorkspace();
+  const isViewer = userRole === "VIEWER";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
@@ -351,18 +354,20 @@ export function WorkflowDetailPage() {
           eyebrow="Engine"
           description="Build action templates, manage triggers, and review execution logs."
           actions={
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setEditingWorkflowId("");
-                setForm(emptyWorkflowForm);
-                setIsAddModalOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Workflow
-            </Button>
+            !isViewer ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setEditingWorkflowId("");
+                  setForm(emptyWorkflowForm);
+                  setIsAddModalOpen(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Workflow
+              </Button>
+            ) : undefined
           }
         />
 
@@ -526,16 +531,18 @@ export function WorkflowDetailPage() {
                         >
                           <Terminal className="w-3.5 h-3.5" />
                         </Link>
-                        <button
-                          onClick={() => {
-                            setSelectedWorkflow(w);
-                            setIsDeleteConfirmOpen(true);
-                          }}
-                          className="p-1 text-slate-400 hover:text-danger-600 dark:hover:text-danger-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
-                          title="Delete workflow"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {!isViewer && (
+                          <button
+                            onClick={() => {
+                              setSelectedWorkflow(w);
+                              setIsDeleteConfirmOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-danger-600 dark:hover:text-danger-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
+                            title="Delete workflow"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -637,15 +644,19 @@ export function WorkflowDetailPage() {
         <Button variant="secondary" size="sm" onClick={() => navigate("/workflows")}>
           <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Directory
         </Button>
-        <Button variant="secondary" size="sm" onClick={handleTestWorkflow} disabled={busy}>
+        <Button variant="secondary" size="sm" onClick={handleTestWorkflow} disabled={busy || isViewer}>
           <Play className="w-3.5 h-3.5 mr-1.5" /> Test Automation
         </Button>
-        <Button variant="secondary" size="sm" onClick={startEdit}>
-          <Settings className="w-3.5 h-3.5 mr-1.5" /> Edit
-        </Button>
-        <Button variant="danger" size="sm" onClick={() => setIsDeleteConfirmOpen(true)}>
-          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
-        </Button>
+        {!isViewer && (
+          <>
+            <Button variant="secondary" size="sm" onClick={startEdit}>
+              <Settings className="w-3.5 h-3.5 mr-1.5" /> Edit
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setIsDeleteConfirmOpen(true)}>
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+            </Button>
+          </>
+        )}
       </div>
     );
 
