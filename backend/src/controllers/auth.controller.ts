@@ -38,7 +38,7 @@ const setRefreshTokenCookie = (res: Response, token: string) => {
 
 export const registerUser = async (req:Request,res:Response) =>{
   try {
-    const {name,email,password} = req.body
+    const {name,email,password,workspaceName} = req.body
     const existingUser = await User.findOne({email})
     
     if(existingUser) {
@@ -55,7 +55,7 @@ export const registerUser = async (req:Request,res:Response) =>{
     });
 
     await Workspace.create({
-      name: `${user.name}'s Workspace`,
+      name: workspaceName ? workspaceName.trim() : `${user.name}'s Workspace`,
       ownerId: user._id,
       members: [
         {
