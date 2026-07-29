@@ -6,12 +6,15 @@ import { checkSslCertificate } from "../services/ssl.service";
 import { createMonitorEvents } from "../services/event.service";
 import logger from "../utils/logger";
 import Redis from "ioredis"
+import { handleIncidentLifecycle } from "../services/incident.service";
+
 
 // 1. Initialize the BullMQ Worker
 // It listens to the "monitor-checks" queue and uses our Redis connection.
 export const startMonitorWorker = () => {
   const connection = new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379", {
     maxRetriesPerRequest: null, // Required by BullMQ
+    enableOfflineQueue: false,
   });
   
   const worker = new Worker(
@@ -58,6 +61,11 @@ export const startMonitorWorker = () => {
           errorMessage: result.errorMessage,
           checkedAt: result.checkedAt,
         });
+
+
+        // ⚡ INCIDENT LIFECYCLE AUTOMATION
+        await handleIncidentLifecycle(monitor, previousStatus, result);
+
 
         // 6. Fire system events if status changed (e.g. UP -> DOWN)
         await createMonitorEvents({

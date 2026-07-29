@@ -13,6 +13,7 @@ import { addMonitorJob,removeMonitorJob } from "../jobs/monitor.queue";
 import { checkMonitorWithRetries } from "../services/monitor.retry.service";
 
 import { WorkspaceRequest } from "../middlewares/rbac";
+import { handleIncidentLifecycle } from "../services/incident.service";
 
 export const createMonitor = async (req: WorkspaceRequest, res: Response) => {
   try {
@@ -136,6 +137,9 @@ export const runMonitorCheck = async (req: WorkspaceRequest, res: Response) => {
     monitor.sslInfo = sslInfo;
 
     await monitor.save();
+
+    // ⚡ INCIDENT LIFECYCLE AUTOMATION (For Manual Checks)
+    await handleIncidentLifecycle(monitor, previousStatus, result);
 
     await Log.create({
       monitorId: monitor._id,

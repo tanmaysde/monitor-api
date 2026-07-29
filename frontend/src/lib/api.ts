@@ -1,5 +1,6 @@
 import {
   AuthResponse,
+  Incident,
   Monitor,
   MonitorAnalyticsResponse,
   MonitorCheckResponse,
@@ -155,5 +156,48 @@ export const api = {
     request<any>(`/workspaces/${workspaceId}/members/${memberUserId}`, { method: "PUT", token, body: { role } }),
   removeWorkspaceMember: (token: string, workspaceId: string, memberUserId: string) =>
     request<any>(`/workspaces/${workspaceId}/members/${memberUserId}`, { method: "DELETE", token }),
+
+
+    // ⚡ INCIDENTS MANAGED APIS
+  getIncidents: (token: string, status?: string, severity?: string, assignedTo?: string) => {
+    let query = "";
+    if (status || severity || assignedTo) {
+      const params = new URLSearchParams();
+      if (status) params.append("status", status);
+      if (severity) params.append("severity", severity);
+      if (assignedTo) params.append("assignedTo", assignedTo);
+      query = `?${params.toString()}`;
+    }
+    return request<Incident[]>(`/incidents${query}`, { token });
+  },
+
+  getIncidentById: (token: string, id: string) =>
+    request<Incident>(`/incidents/${id}`, { token }),
+
+  acknowledgeIncident: (token: string, id: string) =>
+    request<{ message: string; incident: Incident }>(`/incidents/${id}/acknowledge`, {
+      method: "POST",
+      token,
+    }),
+
+  resolveIncident: (token: string, id: string) =>
+    request<{ message: string; incident: Incident }>(`/incidents/${id}/resolve`, {
+      method: "POST",
+      token,
+    }),
+
+  addIncidentComment: (token: string, id: string, content: string) =>
+    request<{ message: string; incident: Incident }>(`/incidents/${id}/comments`, {
+      method: "POST",
+      token,
+      body: { content },
+    }),
+
+  assignIncident: (token: string, id: string, userId: string) =>
+    request<{ message: string; incident: Incident }>(`/incidents/${id}/assign`, {
+      method: "POST",
+      token,
+      body: { userId },
+    }),
 
 };

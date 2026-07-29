@@ -7,6 +7,8 @@ import workflowRoutes from "./routes/workflow.routes";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import workspaceRoutes from "./routes/workspace.routes";
+import incidentRoutes from "./routes/incident.routes"; // ⚡ ADD THIS IMPORT
+
 
 //rate limiting
 import rateLimit from "express-rate-limit";
@@ -18,7 +20,7 @@ const apiLimiter = rateLimit({
     sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as any,
   }),
   windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 100, // Limit each IP to 100 requests per 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },
@@ -84,7 +86,7 @@ app.use("/api/auth",authRoutes)
 app.use("/api/workspaces", workspaceRoutes); 
 app.use("/api/monitors",monitorRoutes)
 app.use("/api/workflows", workflowRoutes);
-
+app.use("/api/incidents", incidentRoutes); 
 
 app.get("/",(_req,res)=>{
   res.send("API monitoring tool required")

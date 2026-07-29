@@ -107,39 +107,31 @@ Still pending:
 - Test each API in Postman before moving ahead.
 - Track progress against this file after each milestone.
 
-## Feature Upgrades Roadmap
+## Feature Upgrades Roadmap (DevFlow OS 20-Phase Master Plan)
 
-### 1. AI Integrations (The Generative AI Layer)
-- [ ] **AI-Powered Root Cause Analysis (RCA)**: Add an "Analyze with AI" button on failed check logs. The backend sends failure status/headers to Google Gemini API to return a formatted Markdown diagnosis and fix guide.
-- [ ] **Natural Language Workflow Builder (Text-to-JSON)**: Allow users to write prompts like *"Email dev@company.com if Auth API goes down"* and use Gemini to parse it into valid workflow JSON schema.
-- [ ] **Daily AI Incident Summary Emails**: A daily cron job that synthesizes 24-hour incident logs using Gemini and emails an executive status report.
+- [x] **Phase 1 - Authentication & Foundation**: JWT auth, profile, logging, token verification. (Completed)
+- [x] **Phase 2 - Workspaces & RBAC**: Multi-tenant workspaces, invitations, permissions (Owner, Admin, Member, Viewer). (Completed)
+- [x] **Phase 3 - Monitoring Engine**: HTTP/HTTPS checks, interval polling, latency signals, SSL expiration tracking. (Completed)
+- [x] **Phase 4 - Distributed Workers**: BullMQ + Redis task queues for background checker isolation. (Completed)
+- [x] **Phase 5 - Workflow Automation**: Event dispatcher (UP/DOWN/SLOW) and actions (Email, Webhook, Slack, Teams). (Completed)
+- [ ] **Phase 6 - Dashboard & Analytics**: Uptime %, response graphs, and live Socket.io updates.
+- [x] **Phase 7 - Incident Management**: PagerDuty-style severe incidents, assignees, acknowledging, and timeline details. (Completed)
+- [ ] **Phase 8 - Advanced Monitoring**: TCP, Ping, DNS checks, and assertions (JSONPath/Status Code assertions).
+- [ ] **Phase 9 - Visual Workflow Builder**: Drag-and-drop React Flow visual graph canvas.
+- [/] **Phase 10 - Logs & Observability (Mini-Sentry)**: Exception ingestion endpoint & SDK tracker, issue grouping, and search search/filters. (In Progress)
+- [ ] **Phase 11 - Distributed Architecture**: Worker registration, heartbeats, autoscaling, and worker dashboard.
+- [ ] **Phase 12 - Synthetic Monitoring**: Step assertions, cookie tracking, and variable reuse (like Postman).
+- [ ] **Phase 13 - Browser Monitoring**: Playwright headless browser E2E flows, form filling, and crash screenshots.
+- [ ] **Phase 14 - Public Status Pages**: Guest status urls with email/webhook subscription options.
+- [ ] **Phase 15 - Secret Manager**: Vault-like encrypted at rest configuration store for credentials.
+- [ ] **Phase 16 - Plugin SDK**: Hot reloading plugin loaders and marketplace.
+- [ ] **Phase 17 - AI Assistant**: Root cause diagnosis, logs chat, and automated fix recommendations.
+- [ ] **Phase 18 - Enterprise Features**: Audit logs, SSO (SAML), rate limiting, and whitelisting.
+- [ ] **Phase 19 - DevOps Integrations**: Exporters for Grafana, CloudWatch, and CI/CD triggers.
+- [ ] **Phase 20 - Production Ready**: Kubernetes configs, load testing, and self-hosted docker deployment documentation.
 
-### 2. Core Enterprise SaaS Features
-- [x] **Multi-Tenant Workspaces & Role-Based Access Control (RBAC)**: Team workspaces, member invitations, and permissions (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`). (Completed)
-- [x] **Additional Alert Channels (Slack, Teams & Webhooks)**: Send rich alert messages directly to Slack channels, Microsoft Teams, or custom webhooks when an API goes down. (Completed)
-- [ ] **Automated Weekly PDF Reports**: Generate weekly PDF uptime reports and email them as attachments.
-
-### 3. High-Performance Infrastructure
-- [x] **Distributed Worker Queue (BullMQ + Redis)**: Replace in-app `node-cron` with a distributed Redis queue to isolate ping jobs into dedicated background worker processes. (Completed)
-- [x] **SSL/TLS Certificate Expiry Checker**: Read SSL certificate expiration dates via Node `tls` module and alert users 7/14/30 days before expiration. (Completed)
-- [ ] **Multi-Region Monitoring (Edge Workers)**: Check APIs from global regions (US, Europe, Asia) using serverless edge handlers.
-
-### 4. Interactive Frontend & Real-Time UX
-- [ ] **Live Dashboard Updates (WebSockets / Socket.io)**: Establish persistent WebSockets to push status badge updates to the React client in real time.
-- [ ] **Public Status Pages**: Generate read-only, guest-accessible status pages (`/status/:id`) for public systems without authentication.
-- [ ] **Historical Log Exporter (CSV/JSON)**: Download button on check history to export logs in CSV format.
-- [ ] **Drag-and-Drop Visual Workflow Builder (React Flow)**: Build an n8n-like interactive canvas where users drag triggers (API Down, Slow Response) and link them to actions (Email, Webhook) visually.
-
-### 5. Application Observability & Error Tracking (Mini-Sentry)
-- [ ] **Exception Ingestion Endpoint & SDK**: Create a public API endpoint `/api/errors/ingest` and a small client-side SDK snippet to intercept browser errors and upload them to the backend.
-- [ ] **Intelligent Error Grouping (Issues)**: Hash error stack traces to group duplicate exceptions into unique "Issues", tracking frequency and occurrences.
-- [ ] **Issues Dashboard UI**: Build a React interface displaying active code crashes, parsed line numbers/files, and user agent statistics.
-
-
-extra:
-google login
-otp login
-logout of all devices
-user edit
-profile page
-redis stream?
+### Extras:
+- Google Login / OAuth
+- OTP Login
+- Logout from all devices
+- Profile editing & customization

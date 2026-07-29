@@ -15,11 +15,13 @@ import {
   Monitor as MonitorIcon,
   GitBranch,
   LayoutDashboard,
-  Users
+  Users,
+  AlertTriangle
 } from "lucide-react";
 
 export function AppLayout() {
   const { logout, user } = useAuth();
+  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, createWorkspace } = useWorkspace();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -61,6 +63,7 @@ export function AppLayout() {
     { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { to: "/monitors", label: "Monitors", icon: MonitorIcon },
     { to: "/workflows", label: "Workflows", icon: GitBranch },
+    { to: "/incidents", label: "Incidents", icon: AlertTriangle },
     { to: "/team", label: "Team Settings", icon: Users },
   ];
 
