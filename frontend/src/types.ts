@@ -146,3 +146,53 @@ export interface MonitorCheckResponse {
   };
   events: MonitorEvent[];
 }
+
+export type IncidentStatus = "TRIGGERED" | "ACKNOWLEDGED" | "RESOLVED";
+export type IncidentSeverity = "INFO" | "WARNING" | "CRITICAL";
+
+export interface IncidentTimeline {
+  status: IncidentStatus;
+  action: string;
+  timestamp: string;
+  userId?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface IncidentComment {
+  userId: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  userName: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface Incident {
+  _id: string;
+  workspaceId: string;
+  monitorId: {
+    _id: string;
+    name: string;
+    url: string;
+    method?: string;
+  };
+  title: string;
+  status: IncidentStatus;
+  severity: IncidentSeverity;
+  assignedTo?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  acknowledgedAt?: string;
+  resolvedAt?: string;
+  timeline: IncidentTimeline[];
+  comments: IncidentComment[];
+  createdAt: string;
+  updatedAt: string;
+}
