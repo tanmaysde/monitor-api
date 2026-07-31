@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { MonitorForm } from "../components/MonitorForm";
+import { MonitorForm, MonitorFormState } from "../components/MonitorForm";
 import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { api } from "../lib/api";
@@ -9,7 +9,8 @@ import {
   MonitorAnalyticsResponse,
   MonitorEvent,
   MonitorLog,
-  MonitorStatus
+  MonitorStatus,
+  IAssertion
 } from "../types";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -53,6 +54,10 @@ const emptyMonitorForm = {
   interval: 5,
   retries: 3,
   retryInterval: 10,
+  type: "HTTP" as "HTTP" | "TCP" | "PING" | "DNS",
+  port: undefined as number | undefined,
+  dnsRecordType: undefined as "A" | "AAAA" | "CNAME" | "MX" | "TXT" | undefined,
+  assertions: [] as IAssertion[],
 };
 
 export function MonitorDetailPage() {
@@ -70,7 +75,7 @@ export function MonitorDetailPage() {
   const [events, setEvents] = useState<MonitorEvent[]>([]);
   const [analytics, setAnalytics] = useState<MonitorAnalyticsResponse | null>(null);
   const [editingMonitorId, setEditingMonitorId] = useState("");
-  const [form, setForm] = useState(emptyMonitorForm);
+  const [form, setForm] = useState<MonitorFormState>(emptyMonitorForm);
 
   // Table Directory States
   const [searchQuery, setSearchQuery] = useState("");
@@ -259,6 +264,10 @@ export function MonitorDetailPage() {
       interval: selectedMonitor.interval,
       retries: selectedMonitor.retries ?? 3,
       retryInterval: selectedMonitor.retryInterval ?? 10,
+      type: selectedMonitor.type ?? "HTTP",
+      port: selectedMonitor.port,
+      dnsRecordType: selectedMonitor.dnsRecordType,
+      assertions: selectedMonitor.assertions ?? [],
     });
     setIsAddModalOpen(true);
   }
@@ -594,7 +603,7 @@ export function MonitorDetailPage() {
         )}
 
         {/* Create/Edit Modal Overlay */}
-        <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title="Add Monitor Checker">
+        <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title="Add Monitor Checker" size="lg">
           <MonitorForm
             form={form}
             editing={Boolean(editingMonitorId)}

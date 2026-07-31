@@ -34,13 +34,8 @@ export const startMonitorWorker = () => {
 
       try {
         // 3. Perform HTTP ping and SSL check in parallel (fast!)
-                const [result, sslInfo] = await Promise.all([
-          checkMonitorWithRetries(
-            monitor.url,
-            monitor.method,
-            monitor.retries,
-            monitor.retryInterval
-          ),
+        const [result, sslInfo] = await Promise.all([
+          checkMonitorWithRetries(monitor),
           checkSslCertificate(monitor.url),
         ]);
 
