@@ -120,13 +120,8 @@ export const runMonitorCheck = async (req: WorkspaceRequest, res: Response) => {
     }
 
     const previousStatus = monitor.status;
-    const [result, sslInfo] = await Promise.all([
-      checkMonitorWithRetries(
-        monitor.url,
-        monitor.method,
-        monitor.retries,
-        monitor.retryInterval
-      ),
+       const [result, sslInfo] = await Promise.all([
+      checkMonitorWithRetries(monitor),
       checkSslCertificate(monitor.url),
     ]);
 
@@ -175,15 +170,11 @@ export const runAllMonitorChecks = async () => {
     const monitors = await Monitor.find();
     for (const monitor of monitors) {
       const previousStatus = monitor.status;
-          const [result, sslInfo] = await Promise.all([
-      checkMonitorWithRetries(
-        monitor.url,
-        monitor.method,
-        monitor.retries,
-        monitor.retryInterval
-      ),
+      const [result, sslInfo] = await Promise.all([
+      checkMonitorWithRetries(monitor),
       checkSslCertificate(monitor.url),
     ]);
+
 
 
       monitor.status = result.status;

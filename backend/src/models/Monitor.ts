@@ -3,6 +3,29 @@ import { IMonitor } from "../types/monitor.types";
 
 export interface IMonitorDocument extends IMonitor, Document {}
 
+const assertionSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["STATUS_CODE", "RESPONSE_TIME", "TEXT_BODY", "JSON_PATH"],
+      required: true,
+    },
+    operator: {
+      type: String,
+      enum: ["EQUALS", "NOT_EQUALS", "CONTAINS", "NOT_CONTAINS", "GREATER_THAN", "LESS_THAN"],
+      required: true,
+    },
+    value: {
+      type: String,
+      required: true,
+    },
+    target: {
+      type: String,
+    },
+  },
+  { _id: false } // Auto generation of sub-document _id disabled for lightweight data
+);
+
 const monitorSchema = new mongoose.Schema<IMonitorDocument>(
   {
     name: {
@@ -50,6 +73,23 @@ const monitorSchema = new mongoose.Schema<IMonitorDocument>(
       isValid: { type: Boolean },
       isExpired: { type: Boolean },
       error: { type: String },
+    },
+    type:{
+      type: String,
+      enum: ["HTTP", "TCP", "PING", "DNS"],
+      default: "HTTP",
+      required: true
+    },
+    port: {
+      type: Number,
+    },
+    dnsRecordType: {
+      type: String,
+      enum: ["A", "AAAA", "CNAME", "MX", "TXT"],
+    },
+    assertions: {
+      type: [assertionSchema],
+      default: []
     }
   },
   { timestamps: true },

@@ -24,6 +24,13 @@ export interface SSLInfo {
   error?: string;
 }
 
+export interface IAssertion {
+  type: "STATUS_CODE" | "RESPONSE_TIME" | "TEXT_BODY" | "JSON_PATH";
+  operator: "EQUALS" | "NOT_EQUALS" | "CONTAINS" | "NOT_CONTAINS" | "GREATER_THAN" | "LESS_THAN";
+  value: string;
+  target?: string;
+}
+
 export interface Monitor {
   _id: string;
   name: string;
@@ -39,7 +46,10 @@ export interface Monitor {
   updatedAt: string;
   retries?: number;
   retryInterval?: number;
-
+  type: "HTTP" | "TCP" | "PING" | "DNS";
+  port?: number;
+  dnsRecordType?: "A" | "AAAA" | "CNAME" | "MX" | "TXT";
+  assertions?: IAssertion[];
 }
 
 export interface MonitorLog {
