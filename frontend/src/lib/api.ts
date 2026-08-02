@@ -13,7 +13,12 @@ import {
 } from "../types";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== "undefined" &&
+  window.location.hostname !== "localhost" &&
+  window.location.hostname !== "127.0.0.1"
+    ? "https://monitor-api-c77n.onrender.com/api"
+    : "http://localhost:5000/api");
 
 if (typeof window !== "undefined") {
   console.log("🔗 DevFlow API Base URL:", API_BASE_URL);
