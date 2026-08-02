@@ -24,18 +24,42 @@ const apiLimiter = rateLimit({
 
 const app = express();
 
-// ⚡ 1. CORS MUST BE THE VERY FIRST MIDDLEWARE (Reflect exact requesting origin for credentials: "include")
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, postman, sendBeacon)
-      if (!origin) return callback(null, true);
-      // Dynamically reflect exact requesting origin (http://localhost:5173, 5174, 127.0.0.1, etc.)
+// Trust reverse proxies (Render, Railway, Nginx, Vercel)
+app.set("trust proxy", 1);
+
+const allowedOrigins = [
+  "https://monitor-api-frontend.onrender.com",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, postman, sendBeacon)
+    if (!origin) return callback(null, true);
+
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith(".onrender.com") ||
+      origin.includes("localhost") ||
+      origin.includes("127.0.0.1")
+    ) {
       return callback(null, origin);
-    },
-    credentials: true, // Crucial for cookie passing!
-  })
-);
+    }
+
+    return callback(null, origin);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+  optionsSuccessStatus: 200,
+};
+
+// ⚡ 1. CORS MUST BE THE VERY FIRST MIDDLEWARE
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions) as any);
 
 // ⚡ 2. Helmet configured with CORP disabled so errors don't trigger browser CORP blocks
 app.use(
