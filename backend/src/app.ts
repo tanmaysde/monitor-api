@@ -57,9 +57,8 @@ const corsOptions: cors.CorsOptions = {
   optionsSuccessStatus: 200,
 };
 
-// ⚡ 1. CORS MUST BE THE VERY FIRST MIDDLEWARE
+// ⚡ 1. CORS MUST BE THE VERY FIRST MIDDLEWARE (Handles preflights automatically for all routes)
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions) as any);
 
 // ⚡ 2. Helmet configured with CORP disabled so errors don't trigger browser CORP blocks
 app.use(
