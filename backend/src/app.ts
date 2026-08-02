@@ -7,18 +7,14 @@ import workflowRoutes from "./routes/workflow.routes";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import workspaceRoutes from "./routes/workspace.routes";
-import incidentRoutes from "./routes/incident.routes"; // ⚡ ADD THIS IMPORT
-
-
-//rate limiting
+import incidentRoutes from "./routes/incident.routes"; 
+import exceptionRoutes from "./routes/exception.routes";
 import rateLimit from "express-rate-limit";
-import RedisStore from "rate-limit-redis";
 import redisClient from "./config/redis";
 
+
+// Rate limiting middleware (resilient memory/redis fallback)
 const apiLimiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args: string[]) => redisClient.call(args[0], ...args.slice(1)) as any,
-  }),
   windowMs: 15 * 60 * 1000, // 15 minutes window
   max: 1000, // Limit each IP to 1000 requests per 15 minutes
   standardHeaders: true,
@@ -26,34 +22,38 @@ const apiLimiter = rateLimit({
   message: { message: "Too many requests, please try again later." },
 });
 
-
 const app = express();
 
-app.use(helmet());
-app.use(cookieParser());
-
-const allowedOrigins = [
-  "http://localhost:5173", // Local development
-  "https://monitor-api-frontend.onrender.com" // Your production URL
-];
-
+// ⚡ 1. CORS MUST BE THE VERY FIRST MIDDLEWARE (Reflect exact requesting origin for credentials: "include")
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, postman, server-to-server)
+      // Allow requests with no origin (like mobile apps, postman, sendBeacon)
       if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Blocked by CORS"));
-      }
+      // Dynamically reflect exact requesting origin (http://localhost:5173, 5174, 127.0.0.1, etc.)
+      return callback(null, origin);
     },
     credentials: true, // Crucial for cookie passing!
   })
 );
 
+// ⚡ 2. Helmet configured with CORP disabled so errors don't trigger browser CORP blocks
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+app.use(cookieParser());
 app.use(express.json());
+
+// ⚡ 3. Handle JSON Body Parsing Errors cleanly
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && err.status === 400 && "body" in err) {
+    return res.status(400).json({ message: "Invalid JSON payload" });
+  }
+  next(err);
+});
 // Apply the limiter to all routes under "/api"
 app.use("/api", apiLimiter); 
 
@@ -87,9 +87,16 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/monitors",monitorRoutes)
 app.use("/api/workflows", workflowRoutes);
 app.use("/api/incidents", incidentRoutes); 
+app.use("/api/errors", exceptionRoutes);
+
 
 app.get("/",(_req,res)=>{
   res.send("API monitoring tool required")
 })
+
+// Global Error Handler (Guarantees CORS headers on all backend errors)
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  res.status(err.status || 500).json({ message: err.message || "Internal Server Error" });
+});
 
 export default app;
