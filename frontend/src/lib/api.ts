@@ -8,10 +8,12 @@ import {
   MonitorLog,
   Workflow,
   WorkflowExecution,
+  ExceptionIssue,
+  ExceptionEvent,
 } from "../types";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "https://monitor-api-c77n.onrender.com/api";
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api";
 
 type RequestOptions = {
   method?: string;
@@ -199,5 +201,46 @@ export const api = {
       token,
       body: { userId },
     }),
+
+  // ⚡ EXCEPTION (MINI-SENTRY) APIS
+  getIssues: (token: string, status?: string, search?: string, sortBy?: string, page?: number) => {
+    const params = new URLSearchParams();
+    if (status) params.append("status", status);
+    if (search) params.append("search", search);
+    if (sortBy) params.append("sortBy", sortBy);
+    if (page) params.append("page", String(page));
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return request<{ issues: ExceptionIssue[]; total: number; page: number; totalPages: number }>(
+      `/errors/issues${query}`,
+      { token }
+    );
+  },
+
+  getIssueById: (token: string, id: string) =>
+    request<ExceptionIssue>(`/errors/issues/${id}`, { token }),
+
+  getIssueEvents: (token: string, id: string, page?: number) => {
+    const query = page ? `?page=${page}` : "";
+    return request<{ events: ExceptionEvent[]; total: number; page: number; totalPages: number }>(
+      `/errors/issues/${id}/events${query}`,
+      { token }
+    );
+  },
+
+  updateIssueStatus: (token: string, id: string, status: "UNRESOLVED" | "RESOLVED" | "IGNORED") =>
+    request<ExceptionIssue>(`/errors/issues/${id}/status`, {
+      method: "PUT",
+      token,
+      body: { status },
+    }),
+
+  deleteIssue: (token: string, id: string) =>
+    request<{ message: string }>(`/errors/issues/${id}`, { method: "DELETE", token }),
+
+  getExceptionStats: (token: string) =>
+    request<{ unresolvedCount: number; totalCount: number; timeline: Array<{ _id: string; count: number }> }>(
+      "/errors/stats",
+      { token }
+    ),
 
 };

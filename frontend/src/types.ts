@@ -206,3 +206,47 @@ export interface Incident {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ExceptionIssue {
+  _id: string;
+  workspaceId: string;
+  hash: string;
+  errorType: string;
+  message: string;
+  status: "UNRESOLVED" | "RESOLVED" | "IGNORED";
+  firstSeen: string;
+  lastSeen: string;
+  count: number;
+  browsers: Record<string, number>;
+  os: Record<string, number>;
+  urls: Record<string, number>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExceptionEvent {
+  _id: string;
+  issueId: string;
+  workspaceId: string;
+  errorType: string;
+  message: string;
+  stack?: string;
+  url?: string;
+  userAgent?: string;
+  browser?: {
+    name: string;
+    version: string;
+  };
+  os?: {
+    name: string;
+    version: string;
+  };
+  user?: {
+    id?: string;
+    email?: string;
+    ipAddress?: string;
+  };
+  extra?: Record<string, any>;
+  timestamp: string;
+}
+

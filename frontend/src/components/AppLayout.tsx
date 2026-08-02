@@ -16,7 +16,8 @@ import {
   GitBranch,
   LayoutDashboard,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  Bug,
 } from "lucide-react";
 
 export function AppLayout() {
@@ -56,7 +57,7 @@ export function AppLayout() {
   const simulatedNotifications = [
     { id: 1, message: "System Monitor went UP", time: "5m ago", type: "up" },
     { id: 2, message: "Checkout API response slow", time: "1h ago", type: "slow" },
-    { id: 3, message: "Workflow 'Down Email Alert' triggered", time: "2h ago", type: "workflow" },
+    { id: 3, message: "Workflow 'Down Email Alert' triggered", type: "workflow", time: "2h ago" },
   ];
 
   const sidebarLinks = [
@@ -64,6 +65,7 @@ export function AppLayout() {
     { to: "/monitors", label: "Monitors", icon: MonitorIcon },
     { to: "/workflows", label: "Workflows", icon: GitBranch },
     { to: "/incidents", label: "Incidents", icon: AlertTriangle },
+    { to: "/issues", label: "Exceptions", icon: Bug },
     { to: "/team", label: "Team Settings", icon: Users },
   ];
 

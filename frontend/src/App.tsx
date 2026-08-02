@@ -8,6 +8,8 @@ import { MonitorDetailPage } from "./pages/MonitorDetailPage";
 import { WorkflowDetailPage } from "./pages/WorkflowDetailPage";
 import { TeamSettingsPage } from "./pages/TeamSettingsPage";
 import { IncidentPage } from "./pages/IncidentPage";
+import { IssuesPage } from "./pages/IssuesPage";
+import { IssueDetailPage } from "./pages/IssueDetailPage";
 
 function App() {
   const { token } = useAuth();
@@ -33,6 +35,8 @@ function App() {
         <Route path="/team" element={<TeamSettingsPage />} />
         <Route path="/incidents" element={<IncidentPage />} />
         <Route path="/incidents/:id" element={<IncidentPage />} />
+        <Route path="/issues" element={<IssuesPage />} />
+        <Route path="/issues/:id" element={<IssueDetailPage />} />
       </Route>
       <Route
         path="*"

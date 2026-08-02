@@ -116,9 +116,9 @@ Still pending:
 - [x] **Phase 5 - Workflow Automation**: Event dispatcher (UP/DOWN/SLOW) and actions (Email, Webhook, Slack, Teams). (Completed)
 - [ ] **Phase 6 - Dashboard & Analytics**: Uptime %, response graphs, and live Socket.io updates.
 - [x] **Phase 7 - Incident Management**: PagerDuty-style severe incidents, assignees, acknowledging, and timeline details. (Completed)
-- [ ] **Phase 8 - Advanced Monitoring**: TCP, Ping, DNS checks, and assertions (JSONPath/Status Code assertions).
+- [x] **Phase 8 - Advanced Monitoring**: TCP, Ping, DNS checks, and assertions (JSONPath/Status Code assertions). (Completed)
 - [ ] **Phase 9 - Visual Workflow Builder**: Drag-and-drop React Flow visual graph canvas.
-- [/] **Phase 10 - Logs & Observability (Mini-Sentry)**: Exception ingestion endpoint & SDK tracker, issue grouping, and search search/filters. (In Progress)
+- [x] **Phase 10 - Logs & Observability (Mini-Sentry)**: Exception ingestion endpoint & SDK tracker, issue grouping, and search search/filters. (Completed)
 - [ ] **Phase 11 - Distributed Architecture**: Worker registration, heartbeats, autoscaling, and worker dashboard.
 - [ ] **Phase 12 - Synthetic Monitoring**: Step assertions, cookie tracking, and variable reuse (like Postman).
 - [ ] **Phase 13 - Browser Monitoring**: Playwright headless browser E2E flows, form filling, and crash screenshots.
