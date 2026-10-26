@@ -12,9 +12,13 @@ import { handleIncidentLifecycle } from "../services/incident.service";
 // 1. Initialize the BullMQ Worker
 // It listens to the "monitor-checks" queue and uses our Redis connection.
 export const startMonitorWorker = () => {
-  const connection = new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379", {
+  const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+  const isTls = redisUrl.startsWith("rediss://");
+  const connection = new Redis(redisUrl, {
     maxRetriesPerRequest: null, // Required by BullMQ
     enableOfflineQueue: false,
+    tls: isTls ? {} : undefined, // Enable TLS for Upstash
+    connectTimeout: 10000,
   });
   
   const worker = new Worker(
