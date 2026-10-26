@@ -130,8 +130,14 @@ Still pending:
 - [ ] **Phase 19 - DevOps Integrations**: Exporters for Grafana, CloudWatch, and CI/CD triggers.
 - [ ] **Phase 20 - Production Ready**: Kubernetes configs, load testing, and self-hosted docker deployment documentation.
 
-### Extras:
+### Extras:      
 - Google Login / OAuth
 - OTP Login
 - Logout from all devices
-- Profile editing & customization
+- Profile editing & customization
+- Webhook support (inbound heartbeats / push monitoring)
+- SDK support (NPM package and multi-language backend exception/log tracking)
+- Accessibility (a11y) fixes (keyboard navigation, ARIA labels, semantic markup)
+- Theme improvements (harmonious HSL color theme, modern glassmorphism, and micro-animations)
+- AI workflow features (Gemini-powered root cause analysis and natural language workflow creation)
+db space full, storage full alerts

@@ -3,9 +3,14 @@ import Redis from "ioredis"; // Import raw Redis instead of redisClient
 import logger from "../utils/logger";
 
 // Create a dedicated Redis connection for the Queue
-const connection = new Redis(process.env.REDIS_URL || "redis://127.0.0.1:6379", {
+const redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+const isTls = redisUrl.startsWith("rediss://");
+
+const connection = new Redis(redisUrl, {
   maxRetriesPerRequest: null, // Required by BullMQ
   enableOfflineQueue: false,
+  tls: isTls ? {} : undefined, // Enable TLS for Upstash
+  connectTimeout: 10000,
 });
 
 export const monitorQueue = new Queue("monitor-checks", {
