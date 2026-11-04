@@ -53,14 +53,18 @@ Routes: `/api/auth`, `/api/workspaces`, `/api/monitors`, `/api/workflows`, `/api
    - [ ] Uptime % and response-time charts
    - [ ] Socket.io live status updates
 3. **AI incident analyst (showpiece)**
-   - [ ] Agent triggered on incident open, run as a BullMQ job
-   - [ ] Tools (all scoped by `workspaceId` from the authenticated context, never from model output):
+   - [x] Agent triggered on incident open (and via `POST /api/incidents/:id/analyze`), run as a BullMQ job (`incident-analysis` queue)
+   - [x] Tools (scoped by `workspaceId`/`monitorId` read from the incident, never from model output):
      `get_recent_logs`, `get_ssl_info`, `get_related_exceptions`, `get_other_monitor_statuses`, `dns_lookup`
-   - [ ] Structured output: probable cause, cited evidence, confidence, next steps
-   - [ ] Store tool calls + evidence with the analysis; show in incident timeline
-   - [ ] Safety: treat logs/errors as untrusted data (prompt-injection aware), per-workspace rate/cost limits, caching
-   - [ ] Graceful failure: incident flow never blocks on AI
-   - [ ] Small eval: 10–15 simulated incidents (expired SSL, DNS failure, slow DB, etc.)
+   - [x] Structured output: probable cause, cited evidence, confidence, next steps
+   - [x] Store tool calls + evidence on `Incident.analysis`; shown in an "AI Root-Cause Analysis" panel on the incident page
+   - [x] Safety: system prompt treats tool output as untrusted data, step cap (6 rounds), per-incident claim lock, 30s cooldown, daily per-workspace cap (`AI_DAILY_LIMIT`)
+   - [x] Graceful failure: `requestAnalysis` never throws; failures are stored as `analysis.status = FAILED` with a friendly message
+   - [ ] Eval: `npm run ai:eval` runs 4 seeded scenarios (2/4 verified PASS before the Gemini free-tier daily quota ran out; re-run after reset)
+   - [ ] Verify the DONE path end-to-end in the UI once quota is available
+   - Code: `services/{llm,ai.tools,incident.agent}.ts`, `jobs/analysis.{queue,worker}.ts`, `components/AiAnalysisPanel.tsx`
+   - Note: Gemini free tier = 5 req/min and ~20 req/day per model; each analysis costs ~2-3 requests
+   - **Master switch:** `AI_ANALYSIS_ENABLED=true` in the backend env turns the feature on (default OFF). When off: the analyze endpoint returns 403, no auto-analysis runs, the worker doesn't start, stored `analysis` is stripped from every incident response, and the frontend hides the panel (it asks `GET /api/features`). Restart the backend after changing it (on Render, change the env var and it redeploys).
    - [ ] Natural-language workflow creation, validated against the workflow schema (`actionValidation.ts`) before saving
 4. **Portfolio polish**
    - [ ] README: architecture diagram, screenshots/GIF, live demo link, design decisions and trade-offs
