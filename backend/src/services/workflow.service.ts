@@ -30,8 +30,10 @@ type ExecuteWorkflowInput = {
   eventMessage?: string;
 };
 
+const SUPPORTED_ACTION_TYPES = ["EMAIL", "WEBHOOK", "SLACK", "TEAMS"];
+
 const isSupportedActionType = (type: unknown) => {
-  return type === "EMAIL";
+  return typeof type === "string" && SUPPORTED_ACTION_TYPES.includes(type);
 };
 
 const getValidWorkflowActions = (actions: WorkflowAction[]) => {

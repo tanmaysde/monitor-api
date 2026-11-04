@@ -35,6 +35,7 @@ export const startMonitorWorker = () => {
       }
 
       const previousStatus = monitor.status;
+      const previousResponseTime = monitor.lastResponseTime; // before this check overwrites it
 
       try {
         // 3. Perform HTTP ping and SSL check in parallel (fast!)
@@ -72,6 +73,7 @@ export const startMonitorWorker = () => {
           workspaceId: monitor.workspaceId, 
           monitorName: monitor.name,
           previousStatus,
+          previousResponseTime,
           result,
         });
 

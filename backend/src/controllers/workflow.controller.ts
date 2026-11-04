@@ -7,17 +7,23 @@ import {
   validateWorkflowActions,
 } from "../utils/actionValidation";
 import { runWorkflowTest } from "../services/workflow.service";
+import { pick } from "../utils/pick";
+
+// Only these fields may be set by a client (never workspaceId, timestamps, ...).
+const WORKFLOW_WRITABLE_FIELDS = ["name", "trigger", "conditions", "actions", "enabled"] as const;
 
 export const createWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
-    const actionsError = validateWorkflowActions(req.body.actions || []);
+    const data = pick(req.body, WORKFLOW_WRITABLE_FIELDS);
+
+    const actionsError = validateWorkflowActions(data.actions || []);
     if (actionsError) {
       return res.status(400).json({ message: actionsError });
     }
 
     const workflow = await Workflow.create({
-      ...req.body,
-      actions: normalizeWorkflowActions(req.body.actions || []),
+      ...data,
+      actions: normalizeWorkflowActions(data.actions || []),
       workspaceId: req.workspace._id,
     });
 
@@ -41,13 +47,16 @@ export const getWorkflows = async (req: WorkspaceRequest, res: Response) => {
 
 export const updateWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
-    if (req.body.actions !== undefined) {
-      const actionsError = validateWorkflowActions(req.body.actions);
+    // Use ONLY whitelisted fields (never the raw request body)
+    const data = pick(req.body, WORKFLOW_WRITABLE_FIELDS);
+
+    if (data.actions !== undefined) {
+      const actionsError = validateWorkflowActions(data.actions);
       if (actionsError) {
         return res.status(400).json({ message: actionsError });
       }
 
-      req.body.actions = normalizeWorkflowActions(req.body.actions);
+      data.actions = normalizeWorkflowActions(data.actions);
     }
 
     const workflow = await Workflow.findOneAndUpdate(
@@ -55,7 +64,7 @@ export const updateWorkflow = async (req: WorkspaceRequest, res: Response) => {
         _id: req.params.id,
         workspaceId: req.workspace._id,
       },
-      req.body,
+      { $set: data },
       {
         returnDocument: "after",
         runValidators: true,
