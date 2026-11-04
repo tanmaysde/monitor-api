@@ -10,6 +10,7 @@
     "dev": "node --max-http-header-size=32768 node_modules/ts-node-dev/lib/bin.js --respawn src/server.ts",
     "build": "tsc",
     "seed": "ts-node-dev --transpile-only src/scripts/seed.ts",
+    "ai:eval": "ts-node-dev --transpile-only src/scripts/ai-eval.ts",
     "start": "node --max-http-header-size=32768 dist/server.js"
   },
   "dependencies": {
