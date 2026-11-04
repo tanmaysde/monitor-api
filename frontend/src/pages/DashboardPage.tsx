@@ -73,8 +73,15 @@ export function DashboardPage() {
   // Calculate uptime percentage ratio
   const uptimePct = totalMonitors > 0 ? Math.round((upCount / totalMonitors) * 100) : 100;
 
-  // SSL placeholder (simulated since backend does not check SSL yet, but required by UI specs)
-  const sslExpiringSoon = 0; 
+  // HTTPS monitors whose certificate is already expired or expires within 14 days
+  // (same 14-day threshold the monitor detail page uses to warn)
+  const SSL_WARNING_DAYS = 14;
+  const sslExpiringSoon = monitors.filter(
+    (m) =>
+      m.sslInfo?.isHttps &&
+      (m.sslInfo.isExpired === true ||
+        (m.sslInfo.daysRemaining !== undefined && m.sslInfo.daysRemaining <= SSL_WARNING_DAYS))
+  ).length;
 
   const headerActions = (
     <div className="flex items-center gap-2">
@@ -174,8 +181,8 @@ export function DashboardPage() {
           title="SSL Expiring"
           value={sslExpiringSoon}
           icon={<ShieldCheck className="w-5 h-5 text-brand-500" />}
-          trend="No action needed"
-          trendType="neutral"
+          trend={sslExpiringSoon > 0 ? `Expiring within ${SSL_WARNING_DAYS} days` : "All certificates healthy"}
+          trendType={sslExpiringSoon > 0 ? "negative" : "positive"}
         />
       </div>
 

@@ -16,6 +16,8 @@ type CreateMonitorEventsInput = {
   workspaceId: Types.ObjectId; 
   monitorName: string;
   previousStatus: MonitorStatus;
+  // Response time of the check BEFORE this one (used to avoid repeating SLOW_RESPONSE alerts)
+  previousResponseTime?: number;
   result: CheckResult;
 };
 
@@ -26,6 +28,7 @@ export const createMonitorEvents = async ({
   workspaceId,
   monitorName,
   previousStatus,
+  previousResponseTime,
   result,
 }: CreateMonitorEventsInput) => {
   const events = [];
@@ -56,7 +59,15 @@ export const createMonitorEvents = async ({
     });
   }
 
-  if (result.status === "UP" && result.responseTime > SLOW_RESPONSE_THRESHOLD) {
+  // Only alert when the monitor BECOMES slow, not on every slow check while it stays slow
+  const wasAlreadySlow =
+    previousStatus === "UP" && (previousResponseTime ?? 0) > SLOW_RESPONSE_THRESHOLD;
+
+  if (
+    result.status === "UP" &&
+    result.responseTime > SLOW_RESPONSE_THRESHOLD &&
+    !wasAlreadySlow
+  ) {
     events.push({
       monitorId,
       workspaceId,

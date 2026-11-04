@@ -1,7 +1,7 @@
 import axios,{AxiosError,Method} from "axios";
 import net from "net";
 import dns from "dns";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { URL } from "url";
 import { runAssertions } from "./assertion.service";
 
@@ -78,15 +78,43 @@ export const checkDns = async (targetUrl: string, recordType: string = "A"): Pro
   }
 };
 
+// Hostname: dot-separated labels of letters/digits/hyphens (no leading/trailing hyphen).
+// This deliberately rejects every shell metacharacter (; & | ` $ ( ) spaces, quotes...).
+const HOSTNAME_PATTERN =
+  /^(?=.{1,253}$)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+/** Host to ping: the URL's hostname, with IPv6 brackets removed. */
+export const getPingHost = (targetUrl: string): string =>
+  getHostname(targetUrl).replace(/^\[|\]$/g, "");
+
+/** True only for a plain hostname or an IP address. Used before anything is run. */
+export const isSafePingHost = (host: string): boolean =>
+  net.isIP(host) !== 0 || HOSTNAME_PATTERN.test(host);
+
+export const isValidPingTarget = (targetUrl: string): boolean =>
+  isSafePingHost(getPingHost(targetUrl));
+
 export const checkPing = (targetUrl: string): Promise<any> => {
   return new Promise((resolve) => {
     const start = Date.now();
-    const host = getHostname(targetUrl);
+    const host = getPingHost(targetUrl);
+
+    // SECURITY: never hand unvalidated input to the operating system.
+    if (!isSafePingHost(host)) {
+      return resolve({
+        status: "DOWN",
+        responseTime: 0,
+        errorMessage: "Invalid host for PING monitor (use a hostname or IP address)",
+      });
+    }
+
     const isWindows = process.platform === "win32";
-    
-    // Windows requires "-n 1" while Unix system requires "-c 1" count
-    const cmd = isWindows ? `ping -n 1 ${host}` : `ping -c 1 ${host}`;
-    exec(cmd, (error, stdout, stderr) => {
+    // Windows requires "-n 1" while Unix systems require "-c 1" count
+    const args = isWindows ? ["-n", "1", host] : ["-c", "1", host];
+
+    // execFile runs the program directly with an argument list (NO shell), so the
+    // host can never be interpreted as extra commands. The timeout stops hangs.
+    execFile("ping", args, { timeout: 10000, windowsHide: true }, (error, stdout, stderr) => {
       const responseTime = Date.now() - start;
       if (error) {
         resolve({

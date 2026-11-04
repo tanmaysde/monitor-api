@@ -26,11 +26,29 @@ const generateRefreshToken = (user: { id: any; email: string; tokenVersion: numb
   );
 };
 
+/**
+ * Cookie attributes for the refresh token. The SAME options must be used to set and to
+ * clear the cookie, otherwise browsers will not remove it.
+ *  - secure: true on HTTPS (NODE_ENV=production, or COOKIE_SECURE=true)
+ *  - sameSite "lax" by default. If the frontend and API are on DIFFERENT sites (e.g. a
+ *    Vercel frontend + Render API) set COOKIE_SAMESITE=none (this forces secure) and
+ *    set CORS_ORIGINS so only your frontend may call the API with credentials.
+ * Read at call time (not at import) because dotenv loads after the imports run.
+ */
+const refreshCookieOptions = () => {
+  const crossSite = process.env.COOKIE_SAMESITE === "none";
+  const secure = crossSite || process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true";
+  return {
+    httpOnly: true, // Prevents client-side JS (and XSS attacks) from reading the cookie
+    secure,
+    sameSite: (crossSite ? "none" : "lax") as "none" | "lax", // lax protects against CSRF
+    path: "/",
+  };
+};
+
 const setRefreshTokenCookie = (res: Response, token: string) => {
   res.cookie("refreshToken", token, {
-    httpOnly: true,     // Prevents client-side JS (and XSS attacks) from reading the cookie
-    secure: false,      // Set to true in production when running on HTTPS
-    sameSite: "lax",    // Protects against Cross-Site Request Forgery (CSRF)
+    ...refreshCookieOptions(),
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   });
 };
@@ -113,6 +131,9 @@ export const loginUser = async (req:Request,res:Response) =>{
     
     const refreshToken = generateRefreshToken({ id: user._id, email: user.email, tokenVersion: user.tokenVersion });
 
+    // Without this cookie the silent token refresh fails and users are logged out after 15 minutes
+    setRefreshTokenCookie(res, refreshToken);
+
     res.json({
       message:"Login successful",
       token: accessToken,
@@ -160,10 +181,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 };
 
 export const logoutUser = async (req: Request, res: Response) => {
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    sameSite: "lax",
-  });
+  res.clearCookie("refreshToken", refreshCookieOptions());
   res.json({ message: "Logged out successfully" });
 };
 
@@ -179,10 +197,7 @@ export const revokeAllSessions = async (req: any, res: Response) => {
     user.tokenVersion += 1;
     await user.save();
     // Clear the cookie for this specific device logout flow
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "lax",
-    });
+    res.clearCookie("refreshToken", refreshCookieOptions());
     res.json({ message: "All sessions revoked successfully. Please log in again." });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

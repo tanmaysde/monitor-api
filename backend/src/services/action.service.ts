@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import axios from "axios";
+import { allowPrivateTargets, assertSafeOutboundUrl, guardedLookup } from "../utils/outboundGuard";
 import {
   ActionContext,
   ActionType,
@@ -8,6 +9,28 @@ import {
   SlackActionConfig,
   TeamsActionConfig,
 } from "../types/action.types";
+
+/**
+ * Sends a JSON POST to a user-supplied URL, safely:
+ * - blocks private/internal targets (SSRF) unless ALLOW_PRIVATE_WEBHOOK_TARGETS=true
+ * - does not follow redirects (a redirect could point at an internal address)
+ * - 10 second timeout so a slow endpoint can't hang the workflow
+ */
+const postJson = async (
+  url: string,
+  payload: unknown,
+  headers: Record<string, string> = {}
+) => {
+  const allowPrivate = allowPrivateTargets();
+  if (!allowPrivate) assertSafeOutboundUrl(url);
+
+  await axios.post(url, payload, {
+    headers: { "Content-Type": "application/json", ...headers },
+    timeout: 10000,
+    maxRedirects: 0,
+    ...(allowPrivate ? {} : { lookup: guardedLookup }),
+  });
+};
 
 const isObject = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,13 +112,8 @@ export const executeWebhookAction = async (
     triggeredAt: new Date().toISOString(),
   };
   // Perform the HTTP POST request to the custom URL
-  await axios.post(config.url, payload, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(config.headers || {}), // Pass custom headers (e.g. bearer tokens for auth) if provided
-    },
-    timeout: 10000, // 10 seconds timeout limit so it doesn't hang
-  });
+  // (custom headers, e.g. bearer tokens for auth, are passed through if provided)
+  await postJson(config.url, payload, config.headers || {});
 };
 
 /**
@@ -146,10 +164,7 @@ export const executeSlackAction = async (
     ],
   };
 
-  await axios.post(config.webhookUrl, slackPayload, {
-    headers: { "Content-Type": "application/json" },
-    timeout: 10000,
-  });
+  await postJson(config.webhookUrl, slackPayload);
 };
 
 /**
@@ -191,10 +206,7 @@ export const executeTeamsAction = async (
     ]
   };
 
-  await axios.post(config.webhookUrl, teamsPayload, {
-    headers: { "Content-Type": "application/json" },
-    timeout: 10000,
-  });
+  await postJson(config.webhookUrl, teamsPayload);
 };
 
 export const executeActionByType = async (

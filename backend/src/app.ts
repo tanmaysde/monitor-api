@@ -32,8 +32,19 @@ const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow non-browser requests (mobile apps, postman, sendBeacon, curl)
     if (!origin) return callback(null, true);
-    // Dynamically reflect requesting origin to satisfy W3C credentials: true specification
-    return callback(null, origin);
+
+    // Optional allowlist: CORS_ORIGINS="https://app.example.com,http://localhost:5173".
+    // Read here (not at import time) because dotenv loads after the imports run.
+    const allowed = (process.env.CORS_ORIGINS || "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean);
+
+    // No allowlist configured: keep the previous behaviour (reflect the origin).
+    if (allowed.length === 0) return callback(null, origin);
+
+    // Allowlist configured: only listed origins get CORS headers; others are blocked by the browser.
+    return callback(null, allowed.includes(origin) ? origin : false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

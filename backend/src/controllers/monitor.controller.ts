@@ -2,7 +2,8 @@ import { Response } from "express";
 import Monitor from "../models/Monitor";
 import Log from "../models/Log";
 import { AuthRequest } from "../middlewares/auth";
-import { checkMonitor } from "../services/monitor.service";
+import { checkMonitor, isValidPingTarget } from "../services/monitor.service";
+import { pick } from "../utils/pick";
 import { calculateMonitorAnalytics } from "../services/analytics.service";
 import Event from "../models/Event";
 import { createMonitorEvents } from "../services/event.service";
@@ -15,10 +16,33 @@ import { checkMonitorWithRetries } from "../services/monitor.retry.service";
 import { WorkspaceRequest } from "../middlewares/rbac";
 import { handleIncidentLifecycle } from "../services/incident.service";
 
+// Only these fields may be set by a client. Everything else (workspaceId, status,
+// lastCheckedAt, lastResponseTime, sslInfo, ...) is controlled by the server.
+const MONITOR_WRITABLE_FIELDS = [
+  "name",
+  "url",
+  "method",
+  "interval",
+  "retries",
+  "retryInterval",
+  "type",
+  "port",
+  "dnsRecordType",
+  "assertions",
+] as const;
+
+const PING_TARGET_ERROR = "PING monitors need a valid hostname or IP address (no spaces or special characters)";
+
 export const createMonitor = async (req: WorkspaceRequest, res: Response) => {
   try {
+    const data = pick(req.body, MONITOR_WRITABLE_FIELDS);
+
+    if (data.type === "PING" && !(typeof data.url === "string" && isValidPingTarget(data.url))) {
+      return res.status(400).json({ message: PING_TARGET_ERROR });
+    }
+
     const monitor = await Monitor.create({
-      ...req.body,
+      ...data,
       workspaceId: req.workspace._id,
     });
 
@@ -63,10 +87,18 @@ export const updateMonitor = async (req: WorkspaceRequest, res: Response) => {
       return res.status(404).json({ message: "Monitor not found" });
     }
 
-    // 2. Perform the update
+    // 2. Perform the update using ONLY whitelisted fields (never the raw request body)
+    const data = pick(req.body, MONITOR_WRITABLE_FIELDS);
+
+    const effectiveType = data.type ?? oldMonitor.type;
+    const effectiveUrl = data.url ?? oldMonitor.url;
+    if (effectiveType === "PING" && !(typeof effectiveUrl === "string" && isValidPingTarget(effectiveUrl))) {
+      return res.status(400).json({ message: PING_TARGET_ERROR });
+    }
+
     const monitor = await Monitor.findOneAndUpdate(
       { _id: req.params.id, workspaceId: req.workspace._id },
-      req.body,
+      { $set: data },
       { returnDocument: "after", runValidators: true },
     );
 
@@ -120,6 +152,7 @@ export const runMonitorCheck = async (req: WorkspaceRequest, res: Response) => {
     }
 
     const previousStatus = monitor.status;
+    const previousResponseTime = monitor.lastResponseTime; // before this check overwrites it
        const [result, sslInfo] = await Promise.all([
       checkMonitorWithRetries(monitor),
       checkSslCertificate(monitor.url),
@@ -151,6 +184,7 @@ export const runMonitorCheck = async (req: WorkspaceRequest, res: Response) => {
       workspaceId: req.workspace._id,
       monitorName: monitor.name,
       previousStatus,
+      previousResponseTime,
       result,
     });
 
