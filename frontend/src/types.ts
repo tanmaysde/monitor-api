@@ -182,6 +182,19 @@ export interface IncidentComment {
   timestamp: string;
 }
 
+export interface IncidentAnalysis {
+  status: "PENDING" | "DONE" | "FAILED";
+  probableCause?: string;
+  confidence?: "LOW" | "MEDIUM" | "HIGH";
+  evidence?: string[];
+  nextSteps?: string[];
+  toolCalls?: { name: string; args: Record<string, unknown>; summary: string }[];
+  model?: string;
+  error?: string;
+  requestedAt?: string;
+  completedAt?: string;
+}
+
 export interface Incident {
   _id: string;
   workspaceId: string;
@@ -203,6 +216,7 @@ export interface Incident {
   resolvedAt?: string;
   timeline: IncidentTimeline[];
   comments: IncidentComment[];
+  analysis?: IncidentAnalysis;
   createdAt: string;
   updatedAt: string;
 }

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { api } from "../lib/api";
 import { Incident } from "../types";
+import { AiAnalysisPanel } from "../components/AiAnalysisPanel";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -24,13 +25,22 @@ export function IncidentPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
-  const { activeWorkspaceId } = useWorkspace();
+  const { activeWorkspaceId, userRole } = useWorkspace();
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+
+  // The AI panel is only shown when the server has the feature switched on.
+  const [aiEnabled, setAiEnabled] = useState(false);
+  useEffect(() => {
+    api
+      .getFeatures()
+      .then((f) => setAiEnabled(Boolean(f.aiAnalysis)))
+      .catch(() => setAiEnabled(false)); // if unsure, keep it hidden
+  }, []);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -75,6 +85,39 @@ export function IncidentPage() {
       loadData(token, id);
     }
   }, [token, activeWorkspaceId, id, statusFilter, severityFilter, assigneeFilter]);
+
+  // While the AI analysis is running, quietly refresh just this incident every 3s.
+  const analysisStatus = selectedIncident?.analysis?.status;
+  useEffect(() => {
+    if (!token || !id || analysisStatus !== "PENDING") return;
+    const timer = setInterval(async () => {
+      try {
+        const detail = await api.getIncidentById(token, id);
+        setSelectedIncident(detail);
+      } catch {
+        /* ignore transient polling errors */
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [token, id, analysisStatus]);
+
+  const handleAnalyze = async () => {
+    if (!token || !id) return;
+    try {
+      setError("");
+      await api.analyzeIncident(token, id);
+    } catch (err: any) {
+      // e.g. cooldown, daily limit, or AI not configured: show the server's message
+      setError(err.message || "Failed to start AI analysis");
+    } finally {
+      // Reload so the PENDING state (or the existing result) shows up right away
+      try {
+        setSelectedIncident(await api.getIncidentById(token, id));
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   const handleAcknowledge = async () => {
     if (!token || !id) return;
@@ -363,6 +406,15 @@ export function IncidentPage() {
           <div className="p-3 text-xs text-danger-700 bg-danger-50 dark:bg-danger-950/20 rounded-md">
             {error}
           </div>
+        )}
+
+        {aiEnabled && (
+          <AiAnalysisPanel
+            analysis={selectedIncident.analysis}
+            canAnalyze={userRole !== "VIEWER"}
+            busy={busy}
+            onAnalyze={handleAnalyze}
+          />
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

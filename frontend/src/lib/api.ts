@@ -204,6 +204,14 @@ export const api = {
       body: { content },
     }),
 
+  getFeatures: () => request<{ aiAnalysis: boolean }>("/features"),
+
+  analyzeIncident: (token: string, id: string) =>
+    request<{ code: string; message: string }>(`/incidents/${id}/analyze`, {
+      method: "POST",
+      token,
+    }),
+
   assignIncident: (token: string, id: string, userId: string) =>
     request<{ message: string; incident: Incident }>(`/incidents/${id}/assign`, {
       method: "POST",

@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import app from "./app";
 import { startMonitorWorker } from "./jobs/monitor.worker";
+import { startAnalysisWorker } from "./jobs/analysis.worker";
 import logger from "./utils/logger";
 
 dotenv.config();
@@ -13,6 +14,7 @@ mongoose
   .then(() => {
     logger.info("MongoDB connected successfully");
     startMonitorWorker();
+    startAnalysisWorker();
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
