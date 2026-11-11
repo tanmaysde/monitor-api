@@ -1,0 +1,367 @@
+<title>DevFlow OS Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout concept: a plain engineering document. Three figures, each making one claim,
+     then a decisions table. Boxes = our code, blue tint = data store, dashed = outside or optional. */
+  :root {
+    --bg: #F6F7F9;
+    --fg: #14181F;
+    --muted: #566070;
+    --line: #B4BCC8;
+    --card: #FFFFFF;
+    --arrow: #3A4350;
+    --store: #E2EDF9;
+    --store-line: #5E8CC4;
+    --ai: #6A3CCB;
+    --ai-bg: #EEE8FB;
+    --ext-line: #7F8896;
+    --head-bg: #E9ECF1;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1218; --fg: #E7EAF0; --muted: #9AA3B2; --line: #394252; --card: #161B23;
+      --arrow: #B3BBC9; --store: #13253A; --store-line: #5B8FCC; --ai: #B79CFF; --ai-bg: #231B3D;
+      --ext-line: #7A8494; --head-bg: #1B212B; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1218; --fg: #E7EAF0; --muted: #9AA3B2; --line: #394252; --card: #161B23;
+    --arrow: #B3BBC9; --store: #13253A; --store-line: #5B8FCC; --ai: #B79CFF; --ai-bg: #231B3D;
+    --ext-line: #7A8494; --head-bg: #1B212B; color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--sans); line-height: 1.55;
+    padding-block: 40px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 44px; }
+  header h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 600; margin: 0 0 8px; text-wrap: balance; letter-spacing: -0.01em; }
+  header p { margin: 0; max-width: 68ch; color: var(--muted); }
+  .eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+  figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+  .scroll svg { display: block; width: 100%; min-width: 880px; height: auto; color: var(--fg); }
+  figcaption { max-width: 78ch; color: var(--muted); font-size: 0.92rem; }
+  figcaption strong { color: var(--fg); font-weight: 600; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 4px; }
+
+  /* diagram vocabulary (classes live here, not inside the SVG) */
+  svg .box   { fill: var(--card); stroke: var(--line); stroke-width: 1.2; }
+  svg .store { fill: var(--store); stroke: var(--store-line); stroke-width: 1.2; }
+  svg .ext   { fill: none; stroke: var(--ext-line); stroke-width: 1.2; stroke-dasharray: 5 4; }
+  svg .ai    { fill: var(--ai-bg); stroke: var(--ai); stroke-width: 1.2; stroke-dasharray: 5 4; }
+  svg .group { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 2 5; }
+  svg .t     { font: 600 13px var(--sans); fill: var(--fg); }
+  svg .s     { font: 400 11px var(--sans); fill: var(--muted); }
+  svg .lbl   { font: 500 10.5px var(--sans); fill: var(--muted); }
+  svg .glab  { font: 500 11px var(--sans); fill: var(--muted); }
+  svg .t-ai  { fill: var(--ai); }
+  svg .ln    { stroke: var(--arrow); fill: none; stroke-width: 1.4; }
+  svg .ln-ai { stroke: var(--ai); fill: none; stroke-width: 1.4; stroke-dasharray: 5 4; }
+  svg .ln-x  { stroke: var(--ext-line); fill: none; stroke-width: 1.3; stroke-dasharray: 4 4; }
+  svg .mk    { fill: var(--arrow); }
+  svg .mk-ai { fill: var(--ai); }
+  svg .mk-x  { fill: var(--ext-line); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+  th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  thead th { background: var(--head-bg); font: 500 0.72rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { font-weight: 600; min-width: 190px; }
+  td { min-width: 0; }
+  td code { font: 0.85em var(--mono); }
+  .note { color: var(--muted); font-size: 0.88rem; max-width: 78ch; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">High-level design</div>
+    <h1>DevFlow OS architecture</h1>
+    <p>A multi-tenant API monitoring platform: scheduled checks, incidents, alerts, error tracking and an optional AI root-cause analyst. Three views of how it fits together, then the decisions behind them.</p>
+  </header>
+
+  <!-- FIGURE 1 -->
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1160 604" role="img" aria-label="System layout: a browser and customer web apps call one Node process that runs the Express API and two workers; MongoDB holds all state, Redis holds job queues and a cache; workers reach monitored services, alert channels and the Gemini API.">
+        <defs>
+          <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+          <marker id="x1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-x" d="M0 0L10 5L0 10z"/></marker>
+        </defs>
+
+        <!-- clients -->
+        <rect class="box" x="50" y="24" width="400" height="70" rx="6"/>
+        <text class="t" x="250" y="52" text-anchor="middle">Browser · React SPA</text>
+        <text class="s" x="250" y="73" text-anchor="middle">Vite · Tailwind · Auth and Workspace contexts</text>
+
+        <rect class="ext" x="480" y="24" width="370" height="70" rx="6"/>
+        <text class="t" x="665" y="52" text-anchor="middle">Customer web apps</text>
+        <text class="s" x="665" y="73" text-anchor="middle">MiniSentry SDK (/api/errors/sdk.js)</text>
+
+        <line class="ln" x1="250" y1="95" x2="250" y2="149" marker-end="url(#a1)"/>
+        <text class="lbl" x="262" y="126">REST · Bearer JWT · x-workspace-id</text>
+        <line class="ln" x1="665" y1="95" x2="665" y2="149" marker-end="url(#a1)"/>
+        <text class="lbl" x="677" y="126">POST /api/errors/ingest (no login)</text>
+
+        <!-- the process -->
+        <rect class="group" x="30" y="150" width="840" height="252" rx="8"/>
+        <text class="glab" x="46" y="170">Node.js process · Express 5 + TypeScript · the API and both workers run together today</text>
+
+        <rect class="box" x="50" y="182" width="400" height="60" rx="6"/>
+        <text class="t" x="66" y="203">Request pipeline</text>
+        <text class="s" x="66" y="219">CORS → Helmet → rate limit →</text>
+        <text class="s" x="66" y="233">auth (JWT + tokenVersion) → RBAC role check</text>
+
+        <rect class="box" x="50" y="252" width="400" height="52" rx="6"/>
+        <text class="t" x="66" y="273">Routers → controllers</text>
+        <text class="s" x="66" y="291">auth · workspaces · monitors · workflows · incidents · errors</text>
+
+        <rect class="box" x="50" y="314" width="400" height="62" rx="6"/>
+        <text class="t" x="66" y="335">Services (shared by API and workers)</text>
+        <text class="s" x="66" y="351">checks · assertions · SSL · incidents · events</text>
+        <text class="s" x="66" y="365">workflows · alert actions · AI agent and tools</text>
+
+        <line class="ln" x1="250" y1="242" x2="250" y2="252" marker-end="url(#a1)"/>
+        <line class="ln" x1="250" y1="304" x2="250" y2="314" marker-end="url(#a1)"/>
+
+        <rect class="box" x="480" y="182" width="370" height="96" rx="6"/>
+        <text class="t" x="496" y="204">Monitor worker · concurrency 5</text>
+        <text class="s" x="496" y="224">check with retries ‖ SSL check</text>
+        <text class="s" x="496" y="240">→ log → incident → event → workflow</text>
+        <text class="s" x="496" y="262">one job per monitor, on its interval</text>
+
+        <rect class="ai" x="480" y="292" width="370" height="84" rx="6"/>
+        <text class="t t-ai" x="496" y="314">AI analysis worker · concurrency 1</text>
+        <text class="s" x="496" y="334">agent loop (max 6 rounds) over 5 read-only,</text>
+        <text class="s" x="496" y="348">workspace-scoped tools · off unless enabled</text>
+
+        <!-- externals -->
+        <rect class="ext" x="940" y="170" width="200" height="56" rx="6"/>
+        <text class="t" x="1040" y="193" text-anchor="middle">Monitored services</text>
+        <text class="s" x="1040" y="211" text-anchor="middle">HTTP · TCP · DNS · ping · TLS</text>
+        <rect class="ext" x="940" y="236" width="200" height="56" rx="6"/>
+        <text class="t" x="1040" y="259" text-anchor="middle">Alert channels</text>
+        <text class="s" x="1040" y="277" text-anchor="middle">SMTP · webhook · Slack · Teams</text>
+        <rect class="ext" x="940" y="324" width="200" height="56" rx="6"/>
+        <text class="t" x="1040" y="347" text-anchor="middle">Gemini API</text>
+        <text class="s" x="1040" y="365" text-anchor="middle">function calling</text>
+
+        <line class="ln-x" x1="851" y1="198" x2="939" y2="198" marker-end="url(#x1)"/>
+        <text class="lbl" x="895" y="190" text-anchor="middle">checks</text>
+        <line class="ln-x" x1="851" y1="264" x2="939" y2="264" marker-end="url(#x1)"/>
+        <text class="lbl" x="895" y="256" text-anchor="middle">alerts</text>
+        <line class="ln-x" x1="851" y1="352" x2="939" y2="352" marker-end="url(#x1)"/>
+        <text class="lbl" x="895" y="344" text-anchor="middle">LLM calls</text>
+
+        <!-- data stores -->
+        <line class="ln" x1="250" y1="403" x2="250" y2="469" marker-start="url(#a1)" marker-end="url(#a1)"/>
+        <text class="lbl" x="262" y="440">read / write · every query filtered by workspaceId</text>
+        <line class="ln" x1="600" y1="403" x2="600" y2="469" marker-end="url(#a1)"/>
+        <text class="lbl" x="612" y="440">add schedule · cache</text>
+        <line class="ln" x1="780" y1="469" x2="780" y2="403" marker-end="url(#a1)"/>
+        <text class="lbl" x="792" y="440">deliver jobs</text>
+
+        <rect class="store" x="50" y="470" width="400" height="86" rx="6"/>
+        <text class="t" x="66" y="492">MongoDB</text>
+        <text class="s" x="66" y="510">users · workspaces (members + roles) · monitors · logs</text>
+        <text class="s" x="66" y="525">events · incidents (+ AI analysis) · workflows · exceptions</text>
+        <text class="s" x="66" y="540">TTL indexes expire logs and events after 30 days</text>
+
+        <rect class="store" x="480" y="470" width="370" height="86" rx="6"/>
+        <text class="t" x="496" y="492">Redis</text>
+        <text class="s" x="496" y="510">BullMQ queues: monitor-checks, incident-analysis</text>
+        <text class="s" x="496" y="525">one repeatable job per monitor (the schedule lives here)</text>
+        <text class="s" x="496" y="540">analytics cache, 60 s</text>
+
+        <!-- legend -->
+        <rect class="box" x="50" y="578" width="16" height="12" rx="2"/>
+        <text class="lbl" x="74" y="588">our code</text>
+        <rect class="store" x="150" y="578" width="16" height="12" rx="2"/>
+        <text class="lbl" x="174" y="588">data store</text>
+        <rect class="ext" x="256" y="578" width="16" height="12" rx="2"/>
+        <text class="lbl" x="280" y="588">outside the process</text>
+        <rect class="ai" x="410" y="578" width="16" height="12" rx="2"/>
+        <text class="lbl" x="434" y="588">optional (AI)</text>
+      </svg>
+    </div>
+    <figcaption><strong>One process, two stores.</strong> The API and both workers share a Node process and the same services. MongoDB holds all state; Redis holds the schedules and a short cache. Every outbound call (checks, alerts, the LLM) leaves from a worker, never from a request handler.</figcaption>
+  </figure>
+
+  <!-- FIGURE 2 -->
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1160 336" role="img" aria-label="Outage pipeline: a scheduled job triggers a check, the result is recorded, a status change opens an incident and creates an event, workflows send alerts, and an optional AI analysis job runs in the background and saves its diagnosis for the incident page.">
+        <defs>
+          <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+          <marker id="i2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-ai" d="M0 0L10 5L0 10z"/></marker>
+          <marker id="x2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-x" d="M0 0L10 5L0 10z"/></marker>
+        </defs>
+
+        <rect class="box" x="20" y="40" width="140" height="104" rx="6"/>
+        <text class="t" x="34" y="62">Schedule</text>
+        <text class="s" x="34" y="82">BullMQ repeatable job</text>
+        <text class="s" x="34" y="97">per monitor, every</text>
+        <text class="s" x="34" y="112">N minutes</text>
+
+        <rect class="box" x="216" y="40" width="140" height="104" rx="6"/>
+        <text class="t" x="230" y="62">Check</text>
+        <text class="s" x="230" y="82">HTTP · TCP · DNS · ping</text>
+        <text class="s" x="230" y="97">retries + assertions</text>
+        <text class="s" x="230" y="112">SSL check in parallel</text>
+
+        <rect class="box" x="412" y="40" width="140" height="104" rx="6"/>
+        <text class="t" x="426" y="62">Record</text>
+        <text class="s" x="426" y="82">update monitor status,</text>
+        <text class="s" x="426" y="97">latency and SSL info</text>
+        <text class="s" x="426" y="112">insert a Log row</text>
+
+        <rect class="box" x="608" y="40" width="140" height="104" rx="6"/>
+        <text class="t" x="622" y="62">Incident</text>
+        <text class="s" x="622" y="82">UP→DOWN opens one</text>
+        <text class="s" x="622" y="97">(never a duplicate)</text>
+        <text class="s" x="622" y="112">DOWN→UP resolves it</text>
+
+        <rect class="box" x="804" y="40" width="140" height="104" rx="6"/>
+        <text class="t" x="818" y="62">Event</text>
+        <text class="s" x="818" y="82">API_DOWN · API_UP</text>
+        <text class="s" x="818" y="97">SLOW_RESPONSE, only</text>
+        <text class="s" x="818" y="112">when it becomes slow</text>
+
+        <rect class="box" x="1000" y="40" width="140" height="104" rx="6"/>
+        <text class="t" x="1014" y="62">Workflow</text>
+        <text class="s" x="1014" y="82">matching workflows</text>
+        <text class="s" x="1014" y="97">run their actions:</text>
+        <text class="s" x="1014" y="112">email, webhook,</text>
+        <text class="s" x="1014" y="127">Slack, Teams</text>
+
+        <line class="ln" x1="161" y1="92" x2="215" y2="92" marker-end="url(#a2)"/>
+        <text class="lbl" x="188" y="84" text-anchor="middle">job</text>
+        <line class="ln" x1="357" y1="92" x2="411" y2="92" marker-end="url(#a2)"/>
+        <text class="lbl" x="384" y="84" text-anchor="middle">result</text>
+        <line class="ln" x1="553" y1="92" x2="607" y2="92" marker-end="url(#a2)"/>
+        <text class="lbl" x="580" y="84" text-anchor="middle">status</text>
+        <line class="ln" x1="749" y1="92" x2="803" y2="92" marker-end="url(#a2)"/>
+        <text class="lbl" x="776" y="84" text-anchor="middle">then</text>
+        <line class="ln" x1="945" y1="92" x2="999" y2="92" marker-end="url(#a2)"/>
+        <text class="lbl" x="972" y="84" text-anchor="middle">event</text>
+
+        <!-- alert out -->
+        <line class="ln-x" x1="1070" y1="145" x2="1070" y2="199" marker-end="url(#x2)"/>
+        <text class="lbl" x="1062" y="176" text-anchor="end">sends</text>
+        <rect class="ext" x="1000" y="200" width="140" height="62" rx="6"/>
+        <text class="t" x="1070" y="226" text-anchor="middle">Alert channels</text>
+        <text class="s" x="1070" y="244" text-anchor="middle">SMTP · webhook · chat</text>
+
+        <!-- AI branch -->
+        <line class="ln-ai" x1="678" y1="145" x2="678" y2="199" marker-end="url(#i2)"/>
+        <text class="lbl t-ai" x="690" y="176">enqueue, never blocks</text>
+        <rect class="ai" x="430" y="200" width="330" height="92" rx="6"/>
+        <text class="t t-ai" x="446" y="222">AI root-cause analysis (optional)</text>
+        <text class="s" x="446" y="242">queue → agent calls 5 read-only tools</text>
+        <text class="s" x="446" y="257">→ probable cause, evidence, next steps</text>
+        <text class="s" x="446" y="272">a failure only marks the analysis FAILED</text>
+
+        <line class="ln-ai" x1="761" y1="246" x2="819" y2="246" marker-end="url(#i2)"/>
+        <text class="lbl t-ai" x="790" y="238" text-anchor="middle">saves</text>
+        <rect class="box" x="820" y="206" width="150" height="80" rx="6"/>
+        <text class="t" x="834" y="230">Incident page</text>
+        <text class="s" x="834" y="249">polls every 3 s, shows</text>
+        <text class="s" x="834" y="264">evidence + tool trail</text>
+
+        <text class="lbl" x="20" y="326">Dashed = optional or outside the process. The whole chain runs inside the monitor worker; each step is wrapped so a failure in one does not stop the check from being logged.</text>
+      </svg>
+    </div>
+    <figcaption><strong>What happens when a service goes down.</strong> A status change is what drives everything after the check: it opens at most one incident, creates an event, and runs the workflows that match. AI analysis is queued separately so a slow or failing model can never delay an alert.</figcaption>
+  </figure>
+
+  <!-- FIGURE 3 -->
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1160 208" role="img" aria-label="Request path: browser, then CORS and rate limit, then authentication, then workspace role check, then a controller that always filters by workspace id. Failures return 429, 401, 403 or 404 before any other tenant's data can be read.">
+        <defs>
+          <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+          <marker id="x3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-x" d="M0 0L10 5L0 10z"/></marker>
+        </defs>
+
+        <rect class="box" x="20" y="36" width="170" height="88" rx="6"/>
+        <text class="t" x="34" y="59">Browser</text>
+        <text class="s" x="34" y="79">sends Bearer token and</text>
+        <text class="s" x="34" y="94">x-workspace-id header</text>
+
+        <rect class="box" x="245" y="36" width="170" height="88" rx="6"/>
+        <text class="t" x="259" y="59">CORS · rate limit</text>
+        <text class="s" x="259" y="79">preflight is answered;</text>
+        <text class="s" x="259" y="94">1000 requests / 15 min / IP</text>
+
+        <rect class="box" x="470" y="36" width="170" height="88" rx="6"/>
+        <text class="t" x="484" y="59">auth</text>
+        <text class="s" x="484" y="79">JWT valid? user exists?</text>
+        <text class="s" x="484" y="94">tokenVersion matches?</text>
+
+        <rect class="box" x="695" y="36" width="170" height="88" rx="6"/>
+        <text class="t" x="709" y="59">RBAC</text>
+        <text class="s" x="709" y="79">member of this workspace?</text>
+        <text class="s" x="709" y="94">role allowed on this route?</text>
+
+        <rect class="store" x="920" y="36" width="170" height="88" rx="6"/>
+        <text class="t" x="934" y="59">Controller → MongoDB</text>
+        <text class="s" x="934" y="79">every query filtered by</text>
+        <text class="s" x="934" y="94">{ _id, workspaceId }</text>
+
+        <line class="ln" x1="191" y1="80" x2="244" y2="80" marker-end="url(#a3)"/>
+        <text class="lbl" x="217" y="72" text-anchor="middle">request</text>
+        <line class="ln" x1="416" y1="80" x2="469" y2="80" marker-end="url(#a3)"/>
+        <text class="lbl" x="442" y="72" text-anchor="middle">allowed</text>
+        <line class="ln" x1="641" y1="80" x2="694" y2="80" marker-end="url(#a3)"/>
+        <text class="lbl" x="667" y="72" text-anchor="middle">identity</text>
+        <line class="ln" x1="866" y1="80" x2="919" y2="80" marker-end="url(#a3)"/>
+        <text class="lbl" x="892" y="72" text-anchor="middle">workspace</text>
+
+        <line class="ln-x" x1="330" y1="125" x2="330" y2="153" marker-end="url(#x3)"/>
+        <rect class="ext" x="245" y="154" width="170" height="34" rx="6"/>
+        <text class="s" x="330" y="175" text-anchor="middle">429 too many requests</text>
+        <line class="ln-x" x1="555" y1="125" x2="555" y2="153" marker-end="url(#x3)"/>
+        <rect class="ext" x="470" y="154" width="170" height="34" rx="6"/>
+        <text class="s" x="555" y="175" text-anchor="middle">401 not logged in</text>
+        <line class="ln-x" x1="780" y1="125" x2="780" y2="153" marker-end="url(#x3)"/>
+        <rect class="ext" x="695" y="154" width="170" height="34" rx="6"/>
+        <text class="s" x="780" y="175" text-anchor="middle">403 not a member / role</text>
+        <line class="ln-x" x1="1005" y1="125" x2="1005" y2="153" marker-end="url(#x3)"/>
+        <rect class="ext" x="920" y="154" width="170" height="34" rx="6"/>
+        <text class="s" x="1005" y="175" text-anchor="middle">404 foreign id: no match</text>
+      </svg>
+    </div>
+    <figcaption><strong>How a request stays inside its tenant.</strong> Three gates run before any query. The workspace comes from a verified membership, not from the request alone, and the controller filters on it, so another tenant's id simply returns 404. The AI tools follow the same rule: ids come from the incident record, never from the model.</figcaption>
+  </figure>
+
+  <section>
+    <h2>Design decisions and what they cost</h2>
+    <p class="note" style="margin:0 0 12px">Each choice is reasonable at the current scale. The right-hand column is what to say when asked what breaks first.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Decision</th><th>Why</th><th>Trade-off</th></tr></thead>
+        <tbody>
+          <tr><td>Job queue instead of timers</td><td>Schedules survive restarts; retries and concurrency come built in; more workers can be added.</td><td>Needs Redis. Retries currently sleep inside the job and hold a worker slot.</td></tr>
+          <tr><td>Workers inside the API process</td><td>One deployable unit on free tiers; shared code and connections.</td><td>Cannot scale API and workers separately. Splitting them is a small change because they only meet through Redis and MongoDB.</td></tr>
+          <tr><td>Tenant = workspace, filter on every query</td><td>One rule that is easy to audit and test.</td><td>Relies on each controller keeping the filter. A shared query helper would remove that risk.</td></tr>
+          <tr><td>Embedded members, timelines, comments</td><td>Read together, no joins, one write.</td><td>Not suitable for lists that can grow without limit.</td></tr>
+          <tr><td>TTL indexes on logs and events</td><td>Bounded storage with no cron job.</td><td>Raw history lasts 30 days. No hourly or daily rollups yet.</td></tr>
+          <tr><td>Analytics cached for 60 s</td><td>Uptime is an aggregation over many rows; dashboards refresh often.</td><td>Up to a minute of staleness. If Redis is down the endpoint errors instead of falling back.</td></tr>
+          <tr><td>AI: model suggests, code executes</td><td>Ids come from the database, tools are read-only, inputs are clamped, rounds are capped, a switch turns it off.</td><td>Free-tier quota limits use. A diagnosis can be wrong, so it is shown with its evidence and labelled AI-generated.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>

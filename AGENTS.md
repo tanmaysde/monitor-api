@@ -125,7 +125,7 @@ Still pending:
 - [ ] **Phase 14 - Public Status Pages**: Guest status urls with email/webhook subscription options.
 - [ ] **Phase 15 - Secret Manager**: Vault-like encrypted at rest configuration store for credentials.
 - [ ] **Phase 16 - Plugin SDK**: Hot reloading plugin loaders and marketplace.
-- [ ] **Phase 17 - AI Assistant**: Root cause diagnosis, logs chat, and automated fix recommendations.
+- [x] **Phase 17 - AI Assistant**: LangGraph SRE StateGraph (Investigate -> ToolNode -> Critic/Reflection -> Synthesis) with automated root-cause diagnosis. (Completed)
 - [ ] **Phase 18 - Enterprise Features**: Audit logs, SSO (SAML), rate limiting, and whitelisting.
 - [ ] **Phase 19 - DevOps Integrations**: Exporters for Grafana, CloudWatch, and CI/CD triggers.
 - [ ] **Phase 20 - Production Ready**: Kubernetes configs, load testing, and self-hosted docker deployment documentation.
