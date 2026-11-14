@@ -109,6 +109,13 @@ export const runWorkflowsForEvent = async (event: WorkflowEventInput) => {
     workspaceId: event.workspaceId,
     trigger: event.type,
     enabled: true,
+    // Workflows scoped to specific monitors only run for those monitors;
+    // unscoped ones (empty or missing monitorIds) run for every monitor.
+    $or: [
+      { monitorIds: { $exists: false } },
+      { monitorIds: { $size: 0 } },
+      { monitorIds: event.monitorId },
+    ],
   });
 
   const executions: IWorkflowExecutionDocument[] = [];

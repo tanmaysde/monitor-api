@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
-import { api } from "../lib/api";
+import { api, API_BASE_URL } from "../lib/api";
 import { ExceptionIssue } from "../types";
 import {
   Bug,
@@ -73,7 +73,8 @@ export function IssuesPage() {
     }
   };
 
-  const sdkCodeSnippet = `<script src="http://localhost:5000/api/errors/sdk.js" data-workspace-id="${activeWorkspaceId || "YOUR_WORKSPACE_ID"}"></script>`;
+  // Point at the same backend this app talks to (local in dev, Render in production)
+  const sdkCodeSnippet = `<script src="${API_BASE_URL}/errors/sdk.js" data-workspace-id="${activeWorkspaceId || "YOUR_WORKSPACE_ID"}"></script>`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sdkCodeSnippet);

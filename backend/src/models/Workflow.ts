@@ -42,6 +42,12 @@ const workflowSchema = new mongoose.Schema<IWorkflowDocument>(
       required: true,
       index: true,
     },
+    // Which monitors this workflow reacts to. Empty (or missing on older documents)
+    // means "every monitor in the workspace", which was the original behaviour.
+    monitorIds: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Monitor" }],
+      default: [],
+    },
     conditions: {
       type: [workflowConditionSchema],
       default: [],

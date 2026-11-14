@@ -20,10 +20,13 @@ type WorkflowFormState = {
   slackWebhookUrl: string;
   // Teams configs
   teamsWebhookUrl: string;
+  // Monitors this workflow applies to (empty = all monitors)
+  monitorIds: string[];
 };
 
 type WorkflowFormProps = {
   form: WorkflowFormState;
+  monitors: { _id: string; name: string }[];
   editing: boolean;
   busy: boolean;
   onChange: (next: WorkflowFormState) => void;
@@ -33,6 +36,7 @@ type WorkflowFormProps = {
 
 export function WorkflowForm({
   form,
+  monitors,
   editing,
   busy,
   onChange,
@@ -91,6 +95,48 @@ export function WorkflowForm({
           </Select>
         </div>
       </div>
+
+      {/* Which monitors trigger this workflow */}
+      <fieldset className="flex flex-col gap-1.5">
+        <legend className="text-xs font-semibold text-slate-500 dark:text-slate-450 mb-1.5">
+          Applies to monitors
+        </legend>
+        {monitors.length === 0 ? (
+          <p className="text-[11px] text-slate-450 dark:text-slate-500">
+            No monitors yet. This workflow will run for every monitor you add.
+          </p>
+        ) : (
+          <div className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 space-y-1.5">
+            {monitors.map((m) => {
+              const checked = form.monitorIds.includes(m._id);
+              return (
+                <label key={m._id} className="flex items-center gap-2 text-xs text-slate-650 dark:text-slate-350 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={busy}
+                    onChange={() =>
+                      onChange({
+                        ...form,
+                        monitorIds: checked
+                          ? form.monitorIds.filter((id) => id !== m._id)
+                          : [...form.monitorIds, m._id],
+                      })
+                    }
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-800 text-brand-500 focus:ring-brand-500 bg-white dark:bg-slate-900"
+                  />
+                  <span className="truncate">{m.name}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
+          {form.monitorIds.length === 0
+            ? "None selected: runs for every monitor in this workspace."
+            : `Runs only for the ${form.monitorIds.length} selected monitor${form.monitorIds.length === 1 ? "" : "s"}.`}
+        </p>
+      </fieldset>
 
       {/* Action Type Selector */}
       <div>

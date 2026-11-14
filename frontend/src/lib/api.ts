@@ -12,7 +12,7 @@ import {
   ExceptionEvent,
 } from "../types";
 
-const API_BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   (typeof window !== "undefined" &&
   window.location.hostname !== "localhost" &&
@@ -135,13 +135,14 @@ export const api = {
     input: Pick<Workflow, "name" | "trigger" | "enabled"> & {
       actions: Workflow["actions"];
       conditions?: Workflow["conditions"];
+      monitorIds?: string[];
     }
   ) => request<Workflow>("/workflows", { method: "POST", token, body: input }),
 
   updateWorkflow: (
     token: string,
     id: string,
-    input: Partial<Pick<Workflow, "name" | "trigger" | "enabled" | "actions" | "conditions">>
+    input: Partial<Pick<Workflow, "name" | "trigger" | "enabled" | "actions" | "conditions" | "monitorIds">>
   ) => request<Workflow>(`/workflows/${id}`, { method: "PUT", token, body: input }),
 
   deleteWorkflow: (token: string, id: string) =>

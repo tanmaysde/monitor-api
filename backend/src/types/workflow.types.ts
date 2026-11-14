@@ -11,6 +11,7 @@ export interface IWorkflow {
   name: string;
   workspaceId: Types.ObjectId;
   trigger: EventType;
+  monitorIds?: Types.ObjectId[]; // empty = all monitors in the workspace
   conditions: Record<string, unknown>[];
   actions: WorkflowAction[];
   enabled: boolean;
