@@ -27,7 +27,7 @@ import {
 
 export function DashboardPage() {
   const { token } = useAuth();
-  const { activeWorkspaceId } = useWorkspace();
+  const { activeWorkspaceId, userRole } = useWorkspace();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -94,14 +94,16 @@ export function DashboardPage() {
         <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${busy ? "animate-spin" : ""}`} />
         Refresh
       </Button>
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={() => navigate("/monitors")}
-      >
-        <Plus className="w-3.5 h-3.5 mr-1.5" />
-        New Monitor
-      </Button>
+      {userRole !== "VIEWER" && (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => navigate("/monitors")}
+        >
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          New Monitor
+        </Button>
+      )}
     </div>
   );
 
@@ -171,11 +173,11 @@ export function DashboardPage() {
           trendType="neutral"
         />
         <StatCard
-          title="Uptime"
+          title="Up Now"
           value={`${uptimePct}%`}
           icon={<TrendingUp className="w-5 h-5 text-healthy-500" />}
-          trend="Last 24h ratio"
-          trendType="positive"
+          trend="Share of monitors up"
+          trendType={uptimePct === 100 ? "positive" : "negative"}
         />
         <StatCard
           title="SSL Expiring"
@@ -247,7 +249,7 @@ export function DashboardPage() {
         <section className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-850 rounded-xl p-5 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Email Automations</h3>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Alert Workflows</h3>
               <p className="text-[11px] text-slate-400 dark:text-slate-500">Workflows triggered by status changes</p>
             </div>
             <Link

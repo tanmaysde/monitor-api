@@ -8,6 +8,8 @@ A multi-tenant uptime and API monitoring platform. Teams add monitors for their 
 
 ---
 
+![Overview dashboard](frontend/public/screenshots/dashboard.png)
+
 ## Features
 
 - **Monitoring**: HTTP, TCP, DNS (A, AAAA, CNAME, MX, TXT) and ping checks, with retries before a monitor is marked down, SSL certificate expiry tracking, and assertions on status code, response time, body text or a JSON path.
@@ -72,6 +74,10 @@ flowchart LR
 
 The five tools (recent logs, SSL info, related exceptions, other monitors' status, DNS lookup) are read-only. The workspace and monitor ids are taken from the incident and fixed when the tools are created, so the model can never choose them. Tool output is treated as untrusted data, the graph is capped at four rounds, and analyses are limited per workspace per day. The whole feature is behind `AI_ANALYSIS_ENABLED`, and when it is off, stored analyses are removed from API responses.
 
+Gemini calls go through a custom retry handler: a per-minute rate limit waits the time Gemini asks for and retries, while a used-up daily quota stops immediately with a clear message. If the final answer is not valid JSON, only the last step is asked again.
+
+**Evaluation:** `npm run ai:eval` runs the agent on four seeded incidents with known causes (database outage, expired SSL certificate, DNS failure, intermittent 503s). On the current version with `gemini-3.5-flash` it scored **4/4**, using 14 model calls in total.
+
 ## Tech stack
 
 | Area | Technology |
@@ -117,7 +123,17 @@ npm run dev               # http://localhost:5173
 
 Log in with `demo@example.com` / `Demo@1234`.
 
-### 4. AI analysis (optional)
+### 4. Public demo (optional)
+
+The home page (`/`) has a **Try the live demo** button that logs visitors into a shared, read-only account. To enable it on a deployed server:
+
+1. Seed the deployed database with real public monitor targets (they behave like each scenario and are checked hourly):
+   `SEED_MONGO_URI=<deployed MongoDB URI> npm run seed -- --live`
+2. Set `DEMO_LOGIN_ENABLED=true` on the server.
+
+The demo account is a Viewer, so it can read everything but change nothing: it cannot create workspaces, run AI analyses or sign other visitors out. The server refuses demo logins if that account ever has more than Viewer rights.
+
+### 5. AI analysis (optional)
 
 Set `GEMINI_API_KEY`, `GEMINI_MODEL` and `AI_ANALYSIS_ENABLED=true`, then restart the backend. An "Analyze with AI" panel appears on incident pages. `npm run ai:eval` runs the agent against the seeded scenarios and checks its diagnoses.
 
@@ -181,4 +197,5 @@ frontend/src
 - The error-ingestion endpoint is identified only by workspace id, not a secret key.
 - CORS accepts any origin unless `CORS_ORIGINS` is set.
 - The monitor and AI workers are not yet separate services.
+- The AI's log tool returns the latest checks rather than the checks around the incident's start time, so analyses of older incidents can miss what happened at the time.
 - `docker-compose.yml` does not yet run the full stack end to end: the frontend container expects the API on port 5000 while compose publishes it on 3000, and Redis has no published port. Use the steps above for local development.

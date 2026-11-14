@@ -26,6 +26,8 @@ export function IncidentPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const { activeWorkspaceId, userRole } = useWorkspace();
+  // Viewers can read incidents but not change them (the API refuses it too)
+  const canEdit = userRole !== null && userRole !== "VIEWER";
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -183,7 +185,7 @@ export function IncidentPage() {
       case "ACKNOWLEDGED":
         return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30";
       case "RESOLVED":
-        return "bg-healthy-50 text-healthy-750 border-healthy-200 dark:bg-healthy-950/10 dark:text-healthy-400 dark:border-healthy-900/20";
+        return "bg-healthy-50 text-healthy-700 border-healthy-200 dark:bg-healthy-950/10 dark:text-healthy-400 dark:border-healthy-900/20";
       default:
         return "bg-slate-100 text-slate-700 border-slate-200";
     }
@@ -239,7 +241,7 @@ export function IncidentPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-855 rounded-lg text-slate-650 dark:text-slate-350 text-xs focus:outline-none"
+                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-850 rounded-lg text-slate-650 dark:text-slate-350 text-xs focus:outline-none"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="TRIGGERED">Triggered</option>
@@ -252,7 +254,7 @@ export function IncidentPage() {
               <select
                 value={severityFilter}
                 onChange={(e) => setSeverityFilter(e.target.value)}
-                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-855 rounded-lg text-slate-650 dark:text-slate-350 text-xs focus:outline-none"
+                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-850 rounded-lg text-slate-650 dark:text-slate-350 text-xs focus:outline-none"
               >
                 <option value="ALL">All Severities</option>
                 <option value="CRITICAL">Critical</option>
@@ -265,7 +267,7 @@ export function IncidentPage() {
               <select
                 value={assigneeFilter}
                 onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-855 rounded-lg text-slate-650 dark:text-slate-350 text-xs focus:outline-none"
+                className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-850 rounded-lg text-slate-650 dark:text-slate-350 text-xs focus:outline-none"
               >
                 <option value="ALL">All Assignees</option>
                 <option value="me">Assigned to Me</option>
@@ -389,12 +391,12 @@ export function IncidentPage() {
 
           {/* Quick incident action controls */}
           <div className="flex items-center gap-2">
-            {status === "TRIGGERED" && (
+            {canEdit && status === "TRIGGERED" && (
               <Button variant="primary" size="sm" onClick={handleAcknowledge} disabled={busy}>
                 <User className="w-4 h-4 mr-1.5" /> Acknowledge
               </Button>
             )}
-            {status !== "RESOLVED" && (
+            {canEdit && status !== "RESOLVED" && (
               <Button variant="primary" size="sm" onClick={handleResolve} disabled={busy}>
                 <CheckCircle className="w-4 h-4 mr-1.5" /> Resolve Incident
               </Button>
@@ -470,7 +472,7 @@ export function IncidentPage() {
                   <select
                     value={assignedTo?._id || ""}
                     onChange={(e) => handleAssign(e.target.value)}
-                    disabled={busy || status === "RESOLVED"}
+                    disabled={busy || status === "RESOLVED" || !canEdit}
                     className="px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-200 text-xs focus:outline-none"
                   >
                     <option value="">Unassigned</option>
@@ -529,7 +531,7 @@ export function IncidentPage() {
               </div>
 
               {/* Add Comment Form */}
-              {status !== "RESOLVED" && (
+              {canEdit && status !== "RESOLVED" && (
                 <form onSubmit={handleAddComment} className="pt-2 space-y-2">
                   <textarea
                     rows={2}

@@ -24,6 +24,7 @@ import { Modal } from "../components/ui/Modal";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
+import { LatencyChart } from "../components/LatencyChart";
 import {
   Activity,
   Plus,
@@ -72,6 +73,8 @@ export function MonitorDetailPage() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [selectedMonitor, setSelectedMonitor] = useState<Monitor | null>(null);
   const [logs, setLogs] = useState<MonitorLog[]>([]);
+  // Latest 30 checks for the uptime strip and latency chart (independent of the log table's paging)
+  const [chartLogs, setChartLogs] = useState<MonitorLog[]>([]);
   const [events, setEvents] = useState<MonitorEvent[]>([]);
   const [analytics, setAnalytics] = useState<MonitorAnalyticsResponse | null>(null);
   const [editingMonitorId, setEditingMonitorId] = useState("");
@@ -115,6 +118,7 @@ export function MonitorDetailPage() {
       if (!monitorId) {
         setSelectedMonitor(null);
         setLogs([]);
+        setChartLogs([]);
         setEvents([]);
         setAnalytics(null);
         setEditingMonitorId("");
@@ -132,13 +136,15 @@ export function MonitorDetailPage() {
       setLogsPage(1);
       setEventsPage(1);
 
-      const [logRes, analyticsData, eventRes] = await Promise.all([
+      const [logRes, analyticsData, eventRes, chartRes] = await Promise.all([
         api.getMonitorLogs(currentToken, target._id, 1, 8),
         api.getMonitorAnalytics(currentToken, target._id),
         api.getMonitorEvents(currentToken, target._id, 1, 8),
+        api.getMonitorLogs(currentToken, target._id, 1, 30), // uptime strip + latency chart
       ]);
 
       setLogs(logRes.data);
+      setChartLogs(chartRes.data);
       setTotalLogsPages(logRes.pagination.pages);
       setEvents(eventRes.data);
       setTotalEventsPages(eventRes.pagination.pages);
@@ -682,8 +688,8 @@ export function MonitorDetailPage() {
 
     // Compute uptime box stats (30 blocks of recent statuses)
     const blocksCount = 30;
-    // Take the 30 most recent logs (logs is sorted newest-first) and reverse to oldest-first
-    const recentLogs = logs.slice(0, blocksCount).reverse();
+    // Charts use their own 30-check fetch (chartLogs, newest-first), not the paged log table
+    const recentLogs = chartLogs.slice(0, blocksCount).reverse();
     const unknownPaddingCount = Math.max(0, blocksCount - recentLogs.length);
     const uptimeBlocks: ("UP" | "DOWN" | "UNKNOWN")[] = [
       ...Array(unknownPaddingCount).fill("UNKNOWN"),
@@ -691,8 +697,7 @@ export function MonitorDetailPage() {
     ];
 
     // Latency Line Chart - Custom SVG visual latency lines
-    const lastLogs = logs.slice(0, 10).reverse();
-    const maxVal = Math.max(...lastLogs.map((l) => l.responseTime), 200);
+    const lastLogs = chartLogs.slice(0, 10).reverse();
 
     return (
       <div className="space-y-6">
@@ -707,7 +712,7 @@ export function MonitorDetailPage() {
               <span className="font-mono text-[10px] text-slate-500">{selectedMonitor.method}</span>
             </div>
           }
-          description={`Polling path: ${selectedMonitor.url} at ${selectedMonitor.interval}s intervals`}
+          description={`Polling path: ${selectedMonitor.url} every ${selectedMonitor.interval} min`}
           actions={detailActions}
         />
 
@@ -735,10 +740,10 @@ export function MonitorDetailPage() {
               trendType="neutral"
             />
             <StatCard
-              title="Incident Count"
+              title="Failed Checks"
               value={analytics.analytics.failureCount}
               icon={<AlertCircle className="w-5 h-5 text-danger-500" />}
-              trend="Failures recorded"
+              trend="Checks that returned DOWN"
               trendType={analytics.analytics.failureCount > 0 ? "negative" : "positive"}
             />
             <StatCard
@@ -806,63 +811,7 @@ export function MonitorDetailPage() {
                   No checks logged yet to populate Latency Graph.
                 </div>
               ) : (
-                <div className="relative pt-2">
-                  {/* Visual SVG line */}
-                  <svg className="w-full h-32 text-brand-500/20" viewBox="0 0 100 30" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="latencyGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {/* Area path */}
-                    <path
-                      d={`M 0 30 ${lastLogs
-                        .map((l, i) => `L ${(i / (lastLogs.length - 1)) * 100} ${30 - (l.responseTime / maxVal) * 25}`)
-                        .join(" ")} L 100 30 Z`}
-                      fill="url(#latencyGrad)"
-                    />
-                    {/* Line path */}
-                    <path
-                      d={lastLogs
-                        .map(
-                          (l, i) =>
-                            `${i === 0 ? "M" : "L"} ${(i / (lastLogs.length - 1)) * 100} ${
-                              30 - (l.responseTime / maxVal) * 25
-                            }`
-                        )
-                        .join(" ")}
-                      fill="none"
-                      stroke="rgb(59, 130, 246)"
-                      strokeWidth="0.8"
-                    />
-                  </svg>
-                  {/* SVG Nodes */}
-                  <div className="absolute inset-0 pt-2 flex justify-between">
-                    {lastLogs.map((l, i) => (
-                      <div
-                        key={l._id}
-                        className="group flex flex-col items-center justify-end relative h-32 w-10 text-center"
-                      >
-                        {/* Hover Tooltip tooltip */}
-                        <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-1 bg-slate-800 text-white text-[9px] px-1.5 py-0.5 rounded shadow-lg transition-opacity duration-200 pointer-events-none z-10 shrink-0">
-                          {l.responseTime}ms
-                        </div>
-                        <div
-                          className="w-1.5 h-1.5 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-900 absolute"
-                          style={{
-                            bottom: `${(l.responseTime / maxVal) * 25 + 10}px`,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                          }}
-                        />
-                        <span className="text-[9px] text-slate-400 mt-2 absolute bottom-0 font-mono">
-                          {new Date(l.checkedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <LatencyChart logs={lastLogs} />
               )}
             </div>
 
@@ -889,7 +838,7 @@ export function MonitorDetailPage() {
                 )}
                 {!selectedMonitor.sslInfo?.isHttps && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                    HTTP (No SSL)
+                    {/^https:/i.test(selectedMonitor.url) ? "Not checked yet" : "HTTP (No SSL)"}
                   </span>
                 )}
               </div>
@@ -928,7 +877,9 @@ export function MonitorDetailPage() {
                   </>
                 ) : (
                   <div className="py-2 text-slate-400 text-[11px]">
-                    This monitor target uses standard HTTP. Perform a check to update SSL metrics if updated to HTTPS.
+                    {/^https:/i.test(selectedMonitor.url)
+                      ? "The certificate hasn't been read yet. Run a check to load its expiry date and issuer."
+                      : "This monitor uses plain HTTP, so there is no certificate to check."}
                   </div>
                 )}
 

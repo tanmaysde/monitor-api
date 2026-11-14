@@ -3,6 +3,7 @@ import { AppLayout } from "./components/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import { AuthPage } from "./pages/AuthPage";
+import { HomePage } from "./pages/HomePage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { MonitorDetailPage } from "./pages/MonitorDetailPage";
 import { WorkflowDetailPage } from "./pages/WorkflowDetailPage";
@@ -16,6 +17,8 @@ function App() {
 
   return (
     <Routes>
+      {/* Public home page with the "Try the live demo" button */}
+      <Route path="/" element={<HomePage />} />
       <Route
         path="/login"
         element={token ? <Navigate to="/dashboard" replace /> : <AuthPage />}
@@ -40,7 +43,7 @@ function App() {
       </Route>
       <Route
         path="*"
-        element={<Navigate to={token ? "/dashboard" : "/login"} replace />}
+        element={<Navigate to={token ? "/dashboard" : "/"} replace />}
       />
     </Routes>
   );

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User";
 import bcrypt from "bcryptjs"
 import Workspace from "../models/Workspace";
+import { getDemoEmail, isDemoLoginEnabled } from "../middlewares/demo";
 
 
 
@@ -148,6 +149,50 @@ export const loginUser = async (req:Request,res:Response) =>{
     res.status(500).json({message: error.message})
   }
 }
+
+/**
+ * POST /api/auth/demo — one-click login to the shared, read-only demo account.
+ *
+ * Off unless DEMO_LOGIN_ENABLED=true. As a safety net it refuses to log anyone in
+ * unless the demo account is a VIEWER (and nothing more) in every workspace it
+ * belongs to, so a misconfigured account can never hand out edit rights publicly.
+ */
+export const demoLogin = async (_req: Request, res: Response) => {
+  try {
+    if (!isDemoLoginEnabled()) {
+      return res.status(404).json({ message: "The live demo is not enabled on this server." });
+    }
+
+    const user = await User.findOne({ email: getDemoEmail() });
+    if (!user) {
+      return res.status(503).json({ message: "The live demo is not set up yet." });
+    }
+
+    const workspaces = await Workspace.find({ "members.userId": user._id }).select("ownerId members");
+    const roles = workspaces.map(
+      (ws) => ws.members.find((m) => String(m.userId) === String(user._id))?.role
+    );
+    const viewerOnly =
+      roles.length > 0 &&
+      roles.every((role) => role === "VIEWER") &&
+      workspaces.every((ws) => String(ws.ownerId) !== String(user._id));
+    if (!viewerOnly) {
+      return res.status(503).json({ message: "The live demo is misconfigured: the demo account must be a Viewer only." });
+    }
+
+    const accessToken = generateAccessToken({ id: user._id, email: user.email, tokenVersion: user.tokenVersion });
+    const refreshToken = generateRefreshToken({ id: user._id, email: user.email, tokenVersion: user.tokenVersion });
+    setRefreshTokenCookie(res, refreshToken);
+
+    res.json({
+      message: "Demo login successful",
+      token: accessToken,
+      user: { id: user._id, name: user.name, email: user.email, isDemo: true },
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const refreshAccessToken = async (req: Request, res: Response) => {
   // Read the refresh token from cookie parsed by cookie-parser
