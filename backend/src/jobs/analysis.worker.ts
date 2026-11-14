@@ -7,9 +7,12 @@ import logger from "../utils/logger";
 
 // Turn raw errors into short, safe messages for the UI.
 const friendlyError = (err: any): string => {
+  // dailyQuota is set by geminiRetryHandler (llm.service.ts) when Gemini reports a per-day limit
   if (err?.dailyQuota) return "The AI provider's daily quota is used up. Try again later or switch the model/plan.";
-  if (err?.status === 429) return "AI rate limit reached. Please try again in a minute.";
-  if (err?.status === 503) return "The AI model is overloaded right now. Please try again shortly.";
+  const raw = String(err?.message ?? "");
+  const status = typeof err?.status === "number" ? err.status : Number(/\[(\d{3})[^\]]*\]/.exec(raw)?.[1]);
+  if (status === 429) return "AI rate limit reached. Please try again in a minute.";
+  if (status === 503) return "The AI model is overloaded right now. Please try again shortly.";
   const msg = String(err?.message || "Unknown error");
   return `Analysis failed: ${msg.length > 200 ? msg.slice(0, 200) + "…" : msg}`;
 };

@@ -72,6 +72,10 @@ flowchart LR
 
 The five tools (recent logs, SSL info, related exceptions, other monitors' status, DNS lookup) are read-only. The workspace and monitor ids are taken from the incident and fixed when the tools are created, so the model can never choose them. Tool output is treated as untrusted data, the graph is capped at four rounds, and analyses are limited per workspace per day. The whole feature is behind `AI_ANALYSIS_ENABLED`, and when it is off, stored analyses are removed from API responses.
 
+Gemini calls go through a custom retry handler: a per-minute rate limit waits the time Gemini asks for and retries, while a used-up daily quota stops immediately with a clear message. If the final answer is not valid JSON, only the last step is asked again.
+
+**Evaluation:** `npm run ai:eval` runs the agent on four seeded incidents with known causes (database outage, expired SSL certificate, DNS failure, intermittent 503s). On the current version with `gemini-3.5-flash` it scored **4/4**, using 14 model calls in total.
+
 ## Tech stack
 
 | Area | Technology |
@@ -181,4 +185,5 @@ frontend/src
 - The error-ingestion endpoint is identified only by workspace id, not a secret key.
 - CORS accepts any origin unless `CORS_ORIGINS` is set.
 - The monitor and AI workers are not yet separate services.
+- The AI's log tool returns the latest checks rather than the checks around the incident's start time, so analyses of older incidents can miss what happened at the time.
 - `docker-compose.yml` does not yet run the full stack end to end: the frontend container expects the API on port 5000 while compose publishes it on 3000, and Redis has no published port. Use the steps above for local development.
