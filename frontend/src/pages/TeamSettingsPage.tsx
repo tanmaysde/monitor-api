@@ -159,7 +159,7 @@ export function TeamSettingsPage() {
             <Shield className="w-4 h-4" /> Active Members ({members.length})
           </h3>
         </div>
-        <div className="divide-y divide-slate-100 dark:divide-slate-855">
+        <div className="divide-y divide-slate-100 dark:divide-slate-850">
           {members.map((member: any) => {
             const profile = member.userId;
             if (!profile) return null;
@@ -190,7 +190,7 @@ export function TeamSettingsPage() {
                       member.role === "OWNER"
                         ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400"
                         : member.role === "ADMIN"
-                        ? "bg-brand-50 text-brand-700 dark:bg-brand-950/20 dark:text-brand-450"
+                        ? "bg-brand-50 text-brand-700 dark:bg-brand-950/20 dark:text-brand-400"
                         : member.role === "MEMBER"
                         ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-350"
                         : "bg-danger-50 text-danger-600 dark:bg-danger-950/20 dark:text-danger-400"

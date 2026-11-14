@@ -10,7 +10,7 @@ type Props = {
 };
 
 const confidenceClass: Record<string, string> = {
-  HIGH: "bg-healthy-50 text-healthy-750 border-healthy-200 dark:bg-healthy-950/10 dark:text-healthy-400 dark:border-healthy-900/20",
+  HIGH: "bg-healthy-50 text-healthy-700 border-healthy-200 dark:bg-healthy-950/10 dark:text-healthy-400 dark:border-healthy-900/20",
   MEDIUM: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30",
   LOW: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 };

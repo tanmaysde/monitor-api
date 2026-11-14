@@ -64,7 +64,7 @@ export function AuthPage() {
               <Zap className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" />
               <div>
                 <h4 className="text-xs font-bold">Checker Engine</h4>
-                <p className="text-[10px] text-slate-400">Under 1s checks</p>
+                <p className="text-[10px] text-slate-400">HTTP, TCP, DNS, ping</p>
               </div>
             </div>
             <div className="flex items-start gap-2.5">

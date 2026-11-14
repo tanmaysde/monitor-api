@@ -3,7 +3,8 @@ import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useWorkspace } from "../context/WorkspaceContext";
 import { ThemeToggle } from "./ui/ThemeToggle";
-import { SearchBar } from "./ui/SearchBar";
+import { api } from "../lib/api";
+import { Incident } from "../types";
 import {
   Activity,
   LogOut,
@@ -20,45 +21,59 @@ import {
   Bug,
 } from "lucide-react";
 
+// Sidebar route → readable breadcrumb label (URL segments like "issues" are not user-facing names)
+const SECTION_LABELS: Record<string, string> = {
+  dashboard: "Overview",
+  monitors: "Monitors",
+  workflows: "Workflows",
+  incidents: "Incidents",
+  issues: "Exceptions",
+  team: "Team Settings",
+};
+
+/** "5m ago", "3h ago", "2d ago" */
+const timeAgo = (iso: string) => {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+};
+
 export function AppLayout() {
-  const { logout, user } = useAuth();
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId, createWorkspace } = useWorkspace();
+  const { logout, user, token } = useAuth();
+  const { activeWorkspaceId } = useWorkspace();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [recentIncidents, setRecentIncidents] = useState<Incident[]>([]);
 
   // Close mobile sidebar on navigation
   useEffect(() => {
     setMobileOpen(false);
   }, [location]);
 
-  // Command+K listener to focus search (visual polish)
+  // Notifications = the workspace's latest incidents (real data, refreshed on navigation)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder="Search..."]') as HTMLInputElement;
-        if (searchInput) searchInput.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+    if (!token || !activeWorkspaceId) return;
+    api
+      .getIncidents(token)
+      .then((list) => setRecentIncidents(list.slice(0, 5)))
+      .catch(() => setRecentIncidents([]));
+  }, [token, activeWorkspaceId, location.pathname]);
+  const openIncidentCount = recentIncidents.filter((i) => i.status !== "RESOLVED").length;
 
+  // Database ids (24 hex characters) are not meaningful to people: show "Details" instead
   const pathSegments = location.pathname.split("/").filter(Boolean);
   const breadcrumbs = pathSegments.map((segment, index) => {
     const to = `/${pathSegments.slice(0, index + 1).join("/")}`;
-    const label = segment.charAt(0).toUpperCase() + segment.slice(1);
+    const label = /^[a-f0-9]{24}$/i.test(segment)
+      ? "Details"
+      : SECTION_LABELS[segment] ?? segment.charAt(0).toUpperCase() + segment.slice(1);
     return { label, to };
   });
-
-  const simulatedNotifications = [
-    { id: 1, message: "System Monitor went UP", time: "5m ago", type: "up" },
-    { id: 2, message: "Checkout API response slow", time: "1h ago", type: "slow" },
-    { id: 3, message: "Workflow 'Down Email Alert' triggered", type: "workflow", time: "2h ago" },
-  ];
 
   const sidebarLinks = [
     { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -210,20 +225,19 @@ export function AppLayout() {
             </nav>
           </div>
 
-          {/* Right Header: Search, Notifications, Theme, Profile */}
+          {/* Right Header: Notifications, Theme */}
           <div className="flex items-center gap-3">
-            {/* Mock Search Bar */}
-            <SearchBar value={searchQuery} onChange={setSearchQuery} />
-
             {/* Notifications Toggle */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
-                aria-label="Notifications"
+                aria-label={openIncidentCount > 0 ? `Notifications: ${openIncidentCount} open incidents` : "Notifications"}
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-500" />
+                {openIncidentCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger-500" />
+                )}
               </button>
 
               {/* Notifications Dropdown */}
@@ -232,21 +246,33 @@ export function AppLayout() {
                   <div className="fixed inset-0 z-45" onClick={() => setShowNotifications(false)} />
                   <div className="absolute right-0 mt-2.5 w-80 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-150">
                     <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-850 flex justify-between items-center">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100">Notifications</span>
-                      <button
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-100">Recent incidents</span>
+                      <Link
+                        to="/incidents"
                         onClick={() => setShowNotifications(false)}
                         className="text-[10px] font-semibold text-brand-500 hover:text-brand-600"
                       >
-                        Clear all
-                      </button>
+                        View all
+                      </Link>
                     </div>
                     <div className="divide-y divide-slate-100 dark:divide-slate-800/60 max-h-72 overflow-y-auto">
-                      {simulatedNotifications.map((notif) => (
-                        <div key={notif.id} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-850/40 transition-colors">
-                          <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{notif.message}</p>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">{notif.time}</span>
-                        </div>
-                      ))}
+                      {recentIncidents.length === 0 ? (
+                        <p className="p-4 text-xs text-slate-400 dark:text-slate-500">No incidents yet. All quiet.</p>
+                      ) : (
+                        recentIncidents.map((incident) => (
+                          <Link
+                            key={incident._id}
+                            to={`/incidents/${incident._id}`}
+                            onClick={() => setShowNotifications(false)}
+                            className="block p-3 hover:bg-slate-50 dark:hover:bg-slate-850/40 transition-colors"
+                          >
+                            <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{incident.title}</p>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 block">
+                              {incident.status} · {timeAgo(incident.createdAt)}
+                            </span>
+                          </Link>
+                        ))
+                      )}
                     </div>
                   </div>
                 </>

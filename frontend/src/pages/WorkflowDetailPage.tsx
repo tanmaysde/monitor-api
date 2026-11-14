@@ -842,7 +842,7 @@ export function WorkflowDetailPage() {
               executions.map((exec) => (
                 <div
                   key={exec._id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border border-slate-100 dark:border-slate-800/80 hover:bg-slate-55 dark:hover:bg-slate-850/20 hover:border-slate-200/60 dark:hover:border-slate-800 transition-all duration-150 gap-2"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border border-slate-100 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-850/20 hover:border-slate-200/60 dark:hover:border-slate-800 transition-all duration-150 gap-2"
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 shrink-0">
