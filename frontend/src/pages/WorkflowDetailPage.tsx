@@ -49,6 +49,7 @@ const emptyWorkflowForm = {
   webhookHeadersJson: "{}",
   slackWebhookUrl: "",
   teamsWebhookUrl: "",
+  monitorIds: [] as string[],
 };
 
 export function WorkflowDetailPage() {
@@ -61,6 +62,8 @@ export function WorkflowDetailPage() {
   const [error, setError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  // Monitors in this workspace, for the "Applies to monitors" picker and labels
+  const [monitors, setMonitors] = useState<{ _id: string; name: string }[]>([]);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
   const [executions, setExecutions] = useState<WorkflowExecution[]>([]);
   const [editingWorkflowId, setEditingWorkflowId] = useState("");
@@ -88,8 +91,12 @@ export function WorkflowDetailPage() {
     try {
       setBusy(true);
       setError("");
-      const workflowData = await api.getWorkflows(currentToken);
+      const [workflowData, monitorData] = await Promise.all([
+        api.getWorkflows(currentToken),
+        api.getMonitors(currentToken),
+      ]);
       setWorkflows(workflowData);
+      setMonitors(monitorData.map((m) => ({ _id: m._id, name: m.name })));
 
       if (!workflowId) {
         setSelectedWorkflow(null);
@@ -156,6 +163,7 @@ export function WorkflowDetailPage() {
         name: form.name,
         trigger: form.trigger,
         enabled: form.enabled,
+        monitorIds: form.monitorIds,
         conditions: [],
         actions: [
           {
@@ -250,6 +258,7 @@ export function WorkflowDetailPage() {
       webhookHeadersJson: isWebhook ? JSON.stringify((action?.config as any)?.headers ?? {}, null, 2) : "{}",
       slackWebhookUrl: isSlack ? (action?.config as any)?.webhookUrl ?? "" : "",
       teamsWebhookUrl: isTeams ? (action?.config as any)?.webhookUrl ?? "" : "",
+      monitorIds: selectedWorkflow.monitorIds ?? [],
     });
     setIsAddModalOpen(true);
   }
@@ -586,6 +595,7 @@ export function WorkflowDetailPage() {
         <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title="Modify Automation Template">
           <WorkflowForm
             form={form}
+            monitors={monitors}
             editing={Boolean(editingWorkflowId)}
             busy={busy}
             onChange={setForm}
@@ -661,6 +671,11 @@ export function WorkflowDetailPage() {
     );
 
     const action = selectedWorkflow.actions[0];
+    const scopedIds = selectedWorkflow.monitorIds ?? [];
+    const scopeLabel =
+      scopedIds.length === 0
+        ? "all monitors"
+        : scopedIds.map((mid) => monitors.find((m) => m._id === mid)?.name ?? "deleted monitor").join(", ");
     const successesCount = executions.filter((e) => e.status === "SUCCESS").length;
     const failuresCount = executions.filter((e) => e.status === "FAILED").length;
     const successRatio = executions.length > 0 ? Math.round((successesCount / executions.length) * 100) : 100;
@@ -678,7 +693,7 @@ export function WorkflowDetailPage() {
               <span className="font-semibold text-brand-500">{selectedWorkflow.trigger}</span>
             </div>
           }
-          description={`Automated template. Status: ${selectedWorkflow.enabled ? "Active polling" : "Disabled"}`}
+          description={`Automated template. Status: ${selectedWorkflow.enabled ? "Active polling" : "Disabled"} · Applies to: ${scopeLabel}`}
           actions={detailActions}
         />
 
@@ -864,6 +879,7 @@ export function WorkflowDetailPage() {
         <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title="Modify Automation Template">
           <WorkflowForm
             form={form}
+            monitors={monitors}
             editing={Boolean(editingWorkflowId)}
             busy={busy}
             onChange={setForm}

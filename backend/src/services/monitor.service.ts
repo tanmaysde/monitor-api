@@ -188,6 +188,9 @@ export const checkMonitor = async (monitor: any): Promise<any> => {
   const assertionOutcome = runAssertions(monitor.assertions || [], result);
   return {
     ...result,
+    // Only checkHttp sets checkedAt; TCP/DNS/PING didn't, which left the monitor's
+    // "last checked" time empty. Stamp every result here so all types get one.
+    checkedAt: result.checkedAt ?? new Date(),
     status: assertionOutcome.isUp ? "UP" : "DOWN",
     errorMessage: assertionOutcome.failedReason || result.errorMessage,
     assertionResults: assertionOutcome.results, // Saved output rules log list

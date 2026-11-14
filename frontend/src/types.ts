@@ -122,6 +122,7 @@ export interface Workflow {
   name: string;
   userId: string;
   trigger: EventType;
+  monitorIds?: string[]; // empty or missing = all monitors in the workspace
   conditions: Record<string, unknown>[];
   actions: WorkflowAction[];
   enabled: boolean;

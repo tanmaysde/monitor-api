@@ -1,5 +1,7 @@
 import { Response } from "express";
+import mongoose from "mongoose";
 import Workflow from "../models/Workflow";
+import Monitor from "../models/Monitor";
 import WorkflowExecution from "../models/WorkflowExecution";
 import { WorkspaceRequest } from "../middlewares/rbac";
 import {
@@ -10,7 +12,36 @@ import { runWorkflowTest } from "../services/workflow.service";
 import { pick } from "../utils/pick";
 
 // Only these fields may be set by a client (never workspaceId, timestamps, ...).
-const WORKFLOW_WRITABLE_FIELDS = ["name", "trigger", "conditions", "actions", "enabled"] as const;
+const WORKFLOW_WRITABLE_FIELDS = ["name", "trigger", "monitorIds", "conditions", "actions", "enabled"] as const;
+
+const MAX_SCOPED_MONITORS = 100;
+
+/**
+ * Checks the optional monitorIds list: an array of valid ids, all belonging to the
+ * caller's workspace (so nobody can attach another tenant's monitor). Returns the
+ * de-duplicated ids, or an error message.
+ */
+const validateMonitorIds = async (
+  value: unknown,
+  workspaceId: mongoose.Types.ObjectId
+): Promise<{ ids: string[] } | { error: string }> => {
+  if (!Array.isArray(value)) return { error: "'monitorIds' must be an array" };
+  if (value.length > MAX_SCOPED_MONITORS) {
+    return { error: `A workflow can be scoped to at most ${MAX_SCOPED_MONITORS} monitors` };
+  }
+  if (!value.every((id) => typeof id === "string" && mongoose.isValidObjectId(id))) {
+    return { error: "'monitorIds' must contain valid monitor ids" };
+  }
+
+  const ids = Array.from(new Set(value as string[]));
+  if (ids.length === 0) return { ids };
+
+  const found = await Monitor.countDocuments({ _id: { $in: ids }, workspaceId });
+  if (found !== ids.length) {
+    return { error: "One or more monitors were not found in this workspace" };
+  }
+  return { ids };
+};
 
 export const createWorkflow = async (req: WorkspaceRequest, res: Response) => {
   try {
@@ -19,6 +50,12 @@ export const createWorkflow = async (req: WorkspaceRequest, res: Response) => {
     const actionsError = validateWorkflowActions(data.actions || []);
     if (actionsError) {
       return res.status(400).json({ message: actionsError });
+    }
+
+    if (data.monitorIds !== undefined) {
+      const scope = await validateMonitorIds(data.monitorIds, req.workspace._id);
+      if ("error" in scope) return res.status(400).json({ message: scope.error });
+      data.monitorIds = scope.ids;
     }
 
     const workflow = await Workflow.create({
@@ -57,6 +94,12 @@ export const updateWorkflow = async (req: WorkspaceRequest, res: Response) => {
       }
 
       data.actions = normalizeWorkflowActions(data.actions);
+    }
+
+    if (data.monitorIds !== undefined) {
+      const scope = await validateMonitorIds(data.monitorIds, req.workspace._id);
+      if ("error" in scope) return res.status(400).json({ message: scope.error });
+      data.monitorIds = scope.ids;
     }
 
     const workflow = await Workflow.findOneAndUpdate(
