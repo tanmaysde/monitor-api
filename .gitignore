@@ -42,3 +42,6 @@ Thumbs.db
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Private study notes (kept locally, not published)
+docs/
