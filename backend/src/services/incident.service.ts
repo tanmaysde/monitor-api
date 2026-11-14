@@ -1,6 +1,5 @@
 import Incident from "../models/Incident";
 import logger from "../utils/logger";
-import { requestAnalysis } from "../jobs/analysis.queue";
 
 interface ICheckResult {
   status: "UP" | "DOWN";
@@ -41,11 +40,7 @@ export const handleIncidentLifecycle = async (
             },
           ],
         });
-        logger.info(`Incident triggered and logged for monitor: ${monitor.name}`);
-
-        // Fire-and-forget: AI analysis runs in the background and can never block
-        // or break incident creation (requestAnalysis never throws).
-        void requestAnalysis(String(incident._id));
+        logger.info(`Incident triggered and logged for monitor: ${monitor.name} (${incident._id})`);
       } else {
         logger.info(`Monitor ${monitor.name} is DOWN, but active incident already exists. Skipping duplicate creation.`);
       }

@@ -10,14 +10,9 @@
     "dev": "node --max-http-header-size=32768 node_modules/ts-node-dev/lib/bin.js --respawn src/server.ts",
     "build": "tsc",
     "seed": "ts-node-dev --transpile-only src/scripts/seed.ts",
-    "ai:eval": "ts-node-dev --transpile-only src/scripts/ai-eval.ts",
     "start": "node --max-http-header-size=32768 dist/server.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@langchain/core": "^1.3.6",
-    "@langchain/google-genai": "^2.3.6",
-    "@langchain/langgraph": "^1.7.3",
     "axios": "^1.18.0",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.81.5",
@@ -33,8 +28,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^9.0.0",
     "rate-limit-redis": "^6.0.0",
-    "winston": "^3.19.0",
-    "zod": "^4.6.7"
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

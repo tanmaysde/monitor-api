@@ -2,7 +2,6 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import app from "./app";
 import { startMonitorWorker } from "./jobs/monitor.worker";
-import { startAnalysisWorker } from "./jobs/analysis.worker";
 import { syncMonitorJobs } from "./jobs/monitor.queue";
 import logger from "./utils/logger";
 
@@ -15,7 +14,6 @@ mongoose
   .then(() => {
     logger.info("MongoDB connected successfully");
     startMonitorWorker();
-    startAnalysisWorker();
 
     // Re-create any missing check schedules (e.g. after Redis was reset). Set
     // SYNC_MONITOR_JOBS=false to skip (useful when pointing at a demo/seed database).

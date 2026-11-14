@@ -14,19 +14,6 @@ export interface IIncidentComment {
   timestamp: Date;
 }
 
-export interface IIncidentAnalysis {
-  status: "PENDING" | "DONE" | "FAILED";
-  probableCause?: string;
-  confidence?: "LOW" | "MEDIUM" | "HIGH";
-  evidence?: string[];
-  nextSteps?: string[];
-  toolCalls?: { name: string; args: Record<string, any>; summary: string }[];
-  model?: string;
-  error?: string;
-  requestedAt?: Date;
-  completedAt?: Date;
-}
-
 export interface IIncident extends Document {
   workspaceId: mongoose.Types.ObjectId;
   monitorId: mongoose.Types.ObjectId;
@@ -38,7 +25,6 @@ export interface IIncident extends Document {
   resolvedAt?: Date;
   timeline: IIncidentTimeline[];
   comments: IIncidentComment[];
-  analysis?: IIncidentAnalysis;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,25 +72,6 @@ const commentSchema = new Schema<IIncidentComment>(
       type: Date,
       default: Date.now,
     },
-  },
-  { _id: false }
-);
-
-const analysisSchema = new Schema<IIncidentAnalysis>(
-  {
-    status: { type: String, enum: ["PENDING", "DONE", "FAILED"], required: true },
-    probableCause: { type: String },
-    confidence: { type: String, enum: ["LOW", "MEDIUM", "HIGH"] },
-    evidence: { type: [String], default: [] },
-    nextSteps: { type: [String], default: [] },
-    toolCalls: {
-      type: [{ _id: false, name: String, args: Schema.Types.Mixed, summary: String }],
-      default: [],
-    },
-    model: { type: String },
-    error: { type: String },
-    requestedAt: { type: Date },
-    completedAt: { type: Date },
   },
   { _id: false }
 );
@@ -157,9 +124,6 @@ const incidentSchema = new Schema<IIncident>(
     comments: {
       type: [commentSchema],
       default: [],
-    },
-    analysis: {
-      type: analysisSchema,
     },
   },
   { timestamps: true }

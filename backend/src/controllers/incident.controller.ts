@@ -3,16 +3,6 @@ import { AuthRequest } from "../middlewares/auth";
 import { WorkspaceRequest } from "../middlewares/rbac";
 import Incident from "../models/Incident";
 import User from "../models/User";
-import { requestAnalysis } from "../jobs/analysis.queue";
-import { isAiEnabled } from "../services/llm.service";
-
-// While the AI feature is switched off, never send stored analysis to clients.
-const hideAiIfDisabled = (incident: any) => {
-  if (isAiEnabled()) return incident;
-  const plain = incident?.toObject ? incident.toObject() : { ...incident };
-  delete plain.analysis;
-  return plain;
-};
 
 // 1. Get all incidents for the active Workspace
 export const getIncidents = async (req: any, res: Response) => {
@@ -34,12 +24,11 @@ export const getIncidents = async (req: any, res: Response) => {
       }
     }
 
-    const listQuery = Incident.find(query)
+    const incidents = await Incident.find(query)
       .populate("monitorId", "name url")
       .populate("assignedTo", "name email")
       .sort({ createdAt: -1 });
-    if (!isAiEnabled()) listQuery.select("-analysis");
-    res.json(await listQuery);
+    res.json(incidents);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -60,32 +49,7 @@ export const getIncidentById = async (req: WorkspaceRequest, res: Response) => {
     if (!incident) {
       return res.status(404).json({ message: "Incident not found" });
     }
-    res.json(hideAiIfDisabled(incident));
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// 2b. Request (or re-run) the AI root-cause analysis for an incident
-export const analyzeIncident = async (req: WorkspaceRequest, res: Response) => {
-  try {
-    const result = await requestAnalysis(req.params.id as string, {
-      force: true,
-      workspaceId: req.workspace._id, // scope to the caller's workspace
-    });
-
-    const statusByCode: Record<string, number> = {
-      QUEUED: 202,
-      NOT_FOUND: 404,
-      DISABLED: 403,
-      NOT_CONFIGURED: 503,
-      ALREADY_PENDING: 409,
-      ALREADY_EXISTS: 409,
-      COOLDOWN: 429,
-      DAILY_LIMIT: 429,
-      ENQUEUE_FAILED: 503,
-    };
-    res.status(statusByCode[result.code] ?? 500).json(result);
+    res.json(incident);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -116,7 +80,7 @@ export const acknowledgeIncident = async (req: AuthRequest & WorkspaceRequest, r
       userId,
     });
     await incident.save();
-    res.json({ message: "Incident acknowledged successfully", incident: hideAiIfDisabled(incident) });
+    res.json({ message: "Incident acknowledged successfully", incident });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -146,7 +110,7 @@ export const resolveIncident = async (req: AuthRequest & WorkspaceRequest, res: 
       userId,
     });
     await incident.save();
-    res.json({ message: "Incident resolved successfully", incident: hideAiIfDisabled(incident) });
+    res.json({ message: "Incident resolved successfully", incident });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -176,7 +140,7 @@ export const addIncidentComment = async (req: AuthRequest & WorkspaceRequest, re
       timestamp: new Date(),
     });
     await incident.save();
-    res.json({ message: "Comment added successfully", incident: hideAiIfDisabled(incident) });
+    res.json({ message: "Comment added successfully", incident });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -230,7 +194,7 @@ export const assignIncident = async (req: AuthRequest & WorkspaceRequest, res: R
     });
 
     await incident.save();
-    res.json({ message: `Incident successfully assigned to ${targetUser.name}`, incident: hideAiIfDisabled(incident) });
+    res.json({ message: `Incident successfully assigned to ${targetUser.name}`, incident });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

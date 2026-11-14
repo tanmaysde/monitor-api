@@ -8,7 +8,6 @@ import {
   resolveIncident,
   addIncidentComment,
   assignIncident,
-  analyzeIncident,
 } from "../controllers/incident.controller";
 
 const router = Router();
@@ -27,14 +26,6 @@ router.get(
   auth,
   checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER", "VIEWER"]),
   getIncidentById
-);
-
-// Run / re-run AI root-cause analysis (Admins, Owners, and Members)
-router.post(
-  "/:id/analyze",
-  auth,
-  checkWorkspaceRole(["OWNER", "ADMIN", "MEMBER"]),
-  analyzeIncident
 );
 
 // Acknowledge incident (Admins, Owners, and Members can modify)

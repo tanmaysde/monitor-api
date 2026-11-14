@@ -11,7 +11,6 @@ import incidentRoutes from "./routes/incident.routes";
 import exceptionRoutes from "./routes/exception.routes";
 import rateLimit from "express-rate-limit";
 import redisClient from "./config/redis";
-import { isAiEnabled } from "./services/llm.service";
 import { isDemoLoginEnabled } from "./middlewares/demo";
 
 // Rate limiting middleware (resilient memory/redis fallback)
@@ -104,7 +103,7 @@ app.get("/healthz", async (_req, res) => {
 
 // Lets the frontend know which optional features are switched on (just booleans, no secrets)
 app.get("/api/features", (_req, res) => {
-  res.json({ aiAnalysis: isAiEnabled(), demo: isDemoLoginEnabled() });
+  res.json({ demo: isDemoLoginEnabled() });
 });
 
 // Routes

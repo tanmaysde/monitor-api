@@ -16,8 +16,6 @@
  *                                  random password, reachable only via /api/auth/demo)
  */
 import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
@@ -254,31 +252,6 @@ async function seed() {
     incident("Flaky Payments API", "Payments API is DOWN", "CRITICAL", 60 * 30, 60 * 30 - 25),
     incident("Flaky Payments API", "Payments API is DOWN", "CRITICAL", 60 * 80, 60 * 80 - 45),
   ]);
-
-  // A REAL analysis produced by the agent (captured with Gemini, not written by hand),
-  // so demo viewers, who cannot run analyses, still see what the AI panel shows.
-  const fixture = path.join(__dirname, "demo-analysis.json");
-  if (fs.existsSync(fixture)) {
-    const a = JSON.parse(fs.readFileSync(fixture, "utf8"));
-    await Incident.updateOne(
-      { workspaceId: workspace._id, title: "Auth Service is DOWN" },
-      {
-        $set: {
-          analysis: {
-            status: "DONE",
-            probableCause: a.probableCause,
-            confidence: a.confidence,
-            evidence: a.evidence,
-            nextSteps: a.nextSteps,
-            toolCalls: a.toolCalls,
-            model: a.model,
-            requestedAt: new Date(new Date(a.capturedAt).getTime() - (a.seconds ?? 30) * 1000),
-            completedAt: new Date(a.capturedAt),
-          },
-        },
-      }
-    );
-  }
 
   // Exceptions that line up with the Auth outage (last ~40 minutes) so the AI
   // analyst has related evidence to find. A couple of unrelated older ones too.
