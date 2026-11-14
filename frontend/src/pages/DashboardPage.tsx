@@ -27,7 +27,7 @@ import {
 
 export function DashboardPage() {
   const { token } = useAuth();
-  const { activeWorkspaceId } = useWorkspace();
+  const { activeWorkspaceId, userRole } = useWorkspace();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -94,14 +94,16 @@ export function DashboardPage() {
         <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${busy ? "animate-spin" : ""}`} />
         Refresh
       </Button>
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={() => navigate("/monitors")}
-      >
-        <Plus className="w-3.5 h-3.5 mr-1.5" />
-        New Monitor
-      </Button>
+      {userRole !== "VIEWER" && (
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => navigate("/monitors")}
+        >
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          New Monitor
+        </Button>
+      )}
     </div>
   );
 

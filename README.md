@@ -8,6 +8,8 @@ A multi-tenant uptime and API monitoring platform. Teams add monitors for their 
 
 ---
 
+![Overview dashboard](frontend/public/screenshots/dashboard.png)
+
 ## Features
 
 - **Monitoring**: HTTP, TCP, DNS (A, AAAA, CNAME, MX, TXT) and ping checks, with retries before a monitor is marked down, SSL certificate expiry tracking, and assertions on status code, response time, body text or a JSON path.
@@ -121,7 +123,17 @@ npm run dev               # http://localhost:5173
 
 Log in with `demo@example.com` / `Demo@1234`.
 
-### 4. AI analysis (optional)
+### 4. Public demo (optional)
+
+The home page (`/`) has a **Try the live demo** button that logs visitors into a shared, read-only account. To enable it on a deployed server:
+
+1. Seed the deployed database with real public monitor targets (they behave like each scenario and are checked hourly):
+   `SEED_MONGO_URI=<deployed MongoDB URI> npm run seed -- --live`
+2. Set `DEMO_LOGIN_ENABLED=true` on the server.
+
+The demo account is a Viewer, so it can read everything but change nothing: it cannot create workspaces, run AI analyses or sign other visitors out. The server refuses demo logins if that account ever has more than Viewer rights.
+
+### 5. AI analysis (optional)
 
 Set `GEMINI_API_KEY`, `GEMINI_MODEL` and `AI_ANALYSIS_ENABLED=true`, then restart the backend. An "Analyze with AI" panel appears on incident pages. `npm run ai:eval` runs the agent against the seeded scenarios and checks its diagnoses.
 

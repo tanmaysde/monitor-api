@@ -284,6 +284,16 @@ export function AppLayout() {
           </div>
         </header>
 
+        {/* Shared read-only demo account: say so, and offer the way out */}
+        {user?.isDemo && (
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2 text-xs bg-brand-50 text-brand-800 border-b border-brand-100 dark:bg-brand-500/10 dark:text-brand-200 dark:border-brand-500/20">
+            <span>You are exploring a read-only demo workspace.</span>
+            <button type="button" onClick={logout} className="font-semibold underline underline-offset-2 hover:no-underline">
+              Create your own account
+            </button>
+          </div>
+        )}
+
         {/* Content Outlet Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7.5xl w-full mx-auto space-y-6">
           <Outlet />

@@ -26,6 +26,8 @@ export function IncidentPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const { activeWorkspaceId, userRole } = useWorkspace();
+  // Viewers can read incidents but not change them (the API refuses it too)
+  const canEdit = userRole !== null && userRole !== "VIEWER";
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -389,12 +391,12 @@ export function IncidentPage() {
 
           {/* Quick incident action controls */}
           <div className="flex items-center gap-2">
-            {status === "TRIGGERED" && (
+            {canEdit && status === "TRIGGERED" && (
               <Button variant="primary" size="sm" onClick={handleAcknowledge} disabled={busy}>
                 <User className="w-4 h-4 mr-1.5" /> Acknowledge
               </Button>
             )}
-            {status !== "RESOLVED" && (
+            {canEdit && status !== "RESOLVED" && (
               <Button variant="primary" size="sm" onClick={handleResolve} disabled={busy}>
                 <CheckCircle className="w-4 h-4 mr-1.5" /> Resolve Incident
               </Button>
@@ -470,7 +472,7 @@ export function IncidentPage() {
                   <select
                     value={assignedTo?._id || ""}
                     onChange={(e) => handleAssign(e.target.value)}
-                    disabled={busy || status === "RESOLVED"}
+                    disabled={busy || status === "RESOLVED" || !canEdit}
                     className="px-2 py-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-200 text-xs focus:outline-none"
                   >
                     <option value="">Unassigned</option>
@@ -529,7 +531,7 @@ export function IncidentPage() {
               </div>
 
               {/* Add Comment Form */}
-              {status !== "RESOLVED" && (
+              {canEdit && status !== "RESOLVED" && (
                 <form onSubmit={handleAddComment} className="pt-2 space-y-2">
                   <textarea
                     rows={2}

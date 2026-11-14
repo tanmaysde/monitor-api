@@ -47,7 +47,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   // Handle Token Expiration (401 Unauthorized)
   if (
     response.status === 401 && 
-    path !== "/auth/login" && 
+    path !== "/auth/login" &&
+    path !== "/auth/demo" &&
     path !== "/auth/register" && 
     path !== "/auth/refresh"
   ) {
@@ -205,7 +206,9 @@ export const api = {
       body: { content },
     }),
 
-  getFeatures: () => request<{ aiAnalysis: boolean }>("/features"),
+  getFeatures: () => request<{ aiAnalysis: boolean; demo?: boolean }>("/features"),
+
+  demoLogin: () => request<AuthResponse>("/auth/demo", { method: "POST" }),
 
   analyzeIncident: (token: string, id: string) =>
     request<{ code: string; message: string }>(`/incidents/${id}/analyze`, {

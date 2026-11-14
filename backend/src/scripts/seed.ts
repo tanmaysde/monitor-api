@@ -1,15 +1,24 @@
 /**
  * Seeds a "Demo Workspace" with realistic monitors, logs, incidents and exceptions.
  *
- *   npm run seed            -> wipe the previous demo data and recreate it
- *   npm run seed -- --clean -> only remove the demo data
+ *   npm run seed                -> wipe the previous demo data and recreate it
+ *   npm run seed -- --clean     -> only remove the demo data
+ *   npm run seed -- --live      -> same data, but monitors point at REAL public URLs
+ *                                  that behave like each scenario, for a deployed
+ *                                  server whose scheduler really checks them
  *
  * Safety: connects to SEED_MONGO_URI (NOT MONGO_URI) so you cannot seed your real
- * database by accident. Only the demo user's workspace and its data are touched.
+ * database by accident. Only the demo users, their workspace and its data are touched.
  *
- * Login after seeding:  demo@example.com / Demo@1234
+ * Accounts created:
+ *   demo@example.com / Demo@1234   OWNER  (for you: full access)
+ *   DEMO_LOGIN_EMAIL               VIEWER (the public "Try the live demo" account;
+ *                                  random password, reachable only via /api/auth/demo)
  */
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import User from "../models/User";
@@ -26,7 +35,11 @@ const DEMO_EMAIL = "demo@example.com";
 const DEMO_PASSWORD = "Demo@1234";
 const DEMO_WORKSPACE = "Demo Workspace";
 const DAYS = 7;
-const CHECK_EVERY_MIN = 15;
+const CHECK_EVERY_MIN = 15; // spacing of the generated history
+const LIVE = process.argv.includes("--live");
+// Live demo monitors are checked for real: hourly keeps traffic and incident noise low
+const MONITOR_INTERVAL_MIN = LIVE ? 60 : CHECK_EVERY_MIN;
+const viewerEmail = () => (process.env.DEMO_LOGIN_EMAIL || "demo-viewer@example.com").trim().toLowerCase();
 
 // Small seeded PRNG so every run produces the same data.
 let seedState = 42;
@@ -47,9 +60,11 @@ type LogShape = {
 interface Scenario {
   name: string;
   url: string;
+  // Real public target that behaves like this scenario (used with --live)
+  liveUrl: string;
   extra?: Record<string, unknown>;
   // Produces one check result. minutesBack = how long ago the check happened.
-  check: (minutesBack: number) => LogShape;
+  check: (minutesBack: number, host: string) => LogShape;
 }
 
 const ok = (base: number, jitter: number): LogShape => ({
@@ -62,17 +77,21 @@ const scenarios: Scenario[] = [
   {
     name: "Healthy API",
     url: "https://api.demo-healthy.example.com/health",
+    liveUrl: "https://example.com",
     check: () => ok(80, 120),
   },
   {
     name: "Slow Reports Service",
     url: "https://reports.demo-slow.example.com/status",
+    liveUrl: "https://httpbin.org/delay/2",
     // Latency creeps up over the week, spikes in the last 3 hours.
     check: (m) => ok(m < 180 ? 1800 : 400 + (DAYS * 1440 - m) / 60, 500),
   },
   {
     name: "Flaky Payments API",
     url: "https://payments.demo-flaky.example.com/ping",
+    // httpbin returns one of the listed codes at random: about 1 in 10 checks fails
+    liveUrl: "https://httpbin.org/status/200,200,200,200,200,200,200,200,200,503",
     check: () =>
       rand() < 0.12
         ? { status: "DOWN", responseTime: between(3000, 5000), statusCode: 503, errorMessage: "Service Unavailable" }
@@ -81,6 +100,8 @@ const scenarios: Scenario[] = [
   {
     name: "Auth Service (DOWN now)",
     url: "https://auth.demo-down.example.com/login",
+    // .invalid is reserved and never resolves, so this stays DOWN
+    liveUrl: "https://auth.demo-outage.invalid/login",
     // Healthy until 40 minutes ago, then hard down.
     check: (m) =>
       m < 40
@@ -90,6 +111,8 @@ const scenarios: Scenario[] = [
   {
     name: "Legacy Site (expired SSL)",
     url: "https://legacy.demo-ssl.example.com",
+    // badssl.com keeps a deliberately expired certificate for testing
+    liveUrl: "https://expired.badssl.com",
     extra: {
       sslInfo: {
         isHttps: true,
@@ -111,10 +134,11 @@ const scenarios: Scenario[] = [
   {
     name: "Marketing DNS (resolution failing)",
     url: "https://www.demo-dns.example.com",
+    liveUrl: "www.marketing-demo.invalid",
     extra: { type: "DNS", dnsRecordType: "A" },
-    check: (m) =>
+    check: (m, host) =>
       m < 90
-        ? { status: "DOWN", responseTime: 0, errorMessage: "getaddrinfo ENOTFOUND www.demo-dns.example.com" }
+        ? { status: "DOWN", responseTime: 0, errorMessage: `getaddrinfo ENOTFOUND ${host}` }
         : ok(30, 40),
   },
 ];
@@ -137,13 +161,28 @@ async function cleanDemoData() {
   await User.deleteOne({ _id: user._id });
 }
 
+async function cleanDemoViewer() {
+  await User.deleteOne({ email: viewerEmail() });
+}
+
 async function seed() {
   const hashed = await bcrypt.hash(DEMO_PASSWORD, 10);
   const user = await User.create({ name: "Demo User", email: DEMO_EMAIL, password: hashed, tokenVersion: 0 });
+  // Public demo account: VIEWER only, with a random password nobody knows. It can
+  // only be reached through POST /api/auth/demo.
+  const viewer = await User.create({
+    name: "Demo Visitor",
+    email: viewerEmail(),
+    password: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10),
+    tokenVersion: 0,
+  });
   const workspace = await Workspace.create({
     name: DEMO_WORKSPACE,
     ownerId: user._id,
-    members: [{ userId: user._id, role: "OWNER" }],
+    members: [
+      { userId: user._id, role: "OWNER" },
+      { userId: viewer._id, role: "VIEWER" },
+    ],
   });
 
   const monitorsByName = new Map<string, mongoose.Types.ObjectId>();
@@ -151,16 +190,19 @@ async function seed() {
 
   for (const s of scenarios) {
     const checks: { minutesBack: number; result: LogShape }[] = [];
+    const url = LIVE ? s.liveUrl : s.url;
+    let host = url;
+    try { host = new URL(url.includes("://") ? url : `http://${url}`).hostname; } catch { /* keep as-is */ }
     for (let m = DAYS * 1440; m >= 0; m -= CHECK_EVERY_MIN) {
-      checks.push({ minutesBack: m, result: s.check(m) });
+      checks.push({ minutesBack: m, result: s.check(m, host) });
     }
     const latest = checks[checks.length - 1];
 
     const monitor = await Monitor.create({
       name: s.name,
-      url: s.url,
+      url,
       workspaceId: workspace._id,
-      interval: CHECK_EVERY_MIN,
+      interval: MONITOR_INTERVAL_MIN,
       status: latest.result.status,
       lastCheckedAt: minutesAgo(latest.minutesBack),
       lastResponseTime: latest.result.responseTime,
@@ -201,6 +243,7 @@ async function seed() {
       status: resolvedMinAgo !== undefined ? "RESOLVED" : "TRIGGERED",
       resolvedAt: resolvedMinAgo !== undefined ? minutesAgo(resolvedMinAgo) : undefined,
       timeline,
+      createdAt: minutesAgo(openedMinAgo),
     };
   };
 
@@ -211,6 +254,31 @@ async function seed() {
     incident("Flaky Payments API", "Payments API is DOWN", "CRITICAL", 60 * 30, 60 * 30 - 25),
     incident("Flaky Payments API", "Payments API is DOWN", "CRITICAL", 60 * 80, 60 * 80 - 45),
   ]);
+
+  // A REAL analysis produced by the agent (captured with Gemini, not written by hand),
+  // so demo viewers, who cannot run analyses, still see what the AI panel shows.
+  const fixture = path.join(__dirname, "demo-analysis.json");
+  if (fs.existsSync(fixture)) {
+    const a = JSON.parse(fs.readFileSync(fixture, "utf8"));
+    await Incident.updateOne(
+      { workspaceId: workspace._id, title: "Auth Service is DOWN" },
+      {
+        $set: {
+          analysis: {
+            status: "DONE",
+            probableCause: a.probableCause,
+            confidence: a.confidence,
+            evidence: a.evidence,
+            nextSteps: a.nextSteps,
+            toolCalls: a.toolCalls,
+            model: a.model,
+            requestedAt: new Date(new Date(a.capturedAt).getTime() - (a.seconds ?? 30) * 1000),
+            completedAt: new Date(a.capturedAt),
+          },
+        },
+      }
+    );
+  }
 
   // Exceptions that line up with the Auth outage (last ~40 minutes) so the AI
   // analyst has related evidence to find. A couple of unrelated older ones too.
@@ -244,8 +312,9 @@ async function seed() {
     await ExceptionEvent.insertMany(events);
   }
 
-  console.log(`Seeded ${scenarios.length} monitors, ${logs.length} logs, 5 incidents, ${issues.length} issues.`);
-  console.log(`Login: ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
+  console.log(`Seeded ${scenarios.length} monitors${LIVE ? " (live URLs, checked hourly)" : ""}, ${logs.length} logs, 5 incidents, ${issues.length} issues.`);
+  console.log(`Owner login: ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
+  console.log(`Demo viewer (via "Try the live demo", needs DEMO_LOGIN_ENABLED=true): ${viewerEmail()}`);
 }
 
 async function main() {
@@ -261,6 +330,7 @@ async function main() {
 
   await mongoose.connect(uri);
   await cleanDemoData();
+  await cleanDemoViewer();
   if (process.argv.includes("--clean")) {
     console.log("Demo data removed.");
   } else {

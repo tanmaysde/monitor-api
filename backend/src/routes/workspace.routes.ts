@@ -1,6 +1,7 @@
 import { Router } from "express";
 import auth from "../middlewares/auth";
 import { checkWorkspaceRole } from "../middlewares/rbac";
+import { blockDemoAccount } from "../middlewares/demo";
 import {
   createWorkspace,
   getMyWorkspaces,
@@ -13,7 +14,8 @@ import {
 const router = Router();
 
 // Create and List Workspaces (Requires only standard JWT Auth)
-router.post("/", auth, createWorkspace);
+// The shared demo account may not create workspaces (it would become their Owner)
+router.post("/", auth, blockDemoAccount, createWorkspace);
 router.get("/", auth, getMyWorkspaces);
 
 router.get(

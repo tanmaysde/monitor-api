@@ -5,6 +5,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  isDemo?: boolean; // the shared read-only demo account
 }
 
 export interface AuthResponse {

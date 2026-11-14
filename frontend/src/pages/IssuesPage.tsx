@@ -21,7 +21,8 @@ import {
 
 export function IssuesPage() {
   const { token } = useAuth();
-  const { activeWorkspaceId } = useWorkspace();
+  const { activeWorkspaceId, userRole } = useWorkspace();
+  const canEdit = userRole !== null && userRole !== "VIEWER";
 
   const [issues, setIssues] = useState<ExceptionIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,9 +240,9 @@ export function IssuesPage() {
                     </span>
                   </div>
 
-                  {/* Quick Action Buttons */}
+                  {/* Quick Action Buttons (hidden for Viewers: the API refuses changes) */}
                   <div className="flex items-center gap-1">
-                    {issue.status !== "RESOLVED" && (
+                    {canEdit && issue.status !== "RESOLVED" && (
                       <button
                         onClick={(e) => handleStatusChange(e, issue._id, "RESOLVED")}
                         title="Mark Resolved"
@@ -250,7 +251,7 @@ export function IssuesPage() {
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
                     )}
-                    {issue.status !== "IGNORED" && (
+                    {canEdit && issue.status !== "IGNORED" && (
                       <button
                         onClick={(e) => handleStatusChange(e, issue._id, "IGNORED")}
                         title="Ignore Issue"

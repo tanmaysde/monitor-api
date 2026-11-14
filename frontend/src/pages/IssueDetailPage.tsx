@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useWorkspace } from "../context/WorkspaceContext";
 import { api } from "../lib/api";
 import { ExceptionIssue, ExceptionEvent } from "../types";
 import {
@@ -16,6 +17,8 @@ import {
 export function IssueDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
+  const { userRole } = useWorkspace();
+  const canEdit = userRole !== null && userRole !== "VIEWER";
   const navigate = useNavigate();
 
   const [issue, setIssue] = useState<ExceptionIssue | null>(null);
@@ -119,7 +122,8 @@ export function IssueDetailPage() {
             </h1>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons (hidden for Viewers: the API refuses changes) */}
+          {canEdit && (
           <div className="flex items-center gap-2 shrink-0">
             {issue.status !== "RESOLVED" && (
               <button
@@ -147,6 +151,7 @@ export function IssueDetailPage() {
               <span>Delete</span>
             </button>
           </div>
+          )}
         </div>
 
         {/* Quick Stats Grid */}
