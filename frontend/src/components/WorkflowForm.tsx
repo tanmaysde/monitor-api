@@ -29,6 +29,7 @@ type WorkflowFormProps = {
   monitors: { _id: string; name: string }[];
   editing: boolean;
   busy: boolean;
+  error?: string;
   onChange: (next: WorkflowFormState) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancel: () => void;
@@ -39,6 +40,7 @@ export function WorkflowForm({
   monitors,
   editing,
   busy,
+  error,
   onChange,
   onSubmit,
   onCancel,
@@ -299,6 +301,15 @@ export function WorkflowForm({
           Enable automatic scheduling for this workflow
         </label>
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="p-3 text-xs font-semibold text-danger-700 bg-danger-50 dark:bg-danger-500/10 dark:text-danger-400 rounded-lg border border-danger-100 dark:border-danger-500/20"
+        >
+          {error}
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-3">
         <Button

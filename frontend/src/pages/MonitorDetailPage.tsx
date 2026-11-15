@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { MonitorForm, MonitorFormState } from "../components/MonitorForm";
 import { useAuth } from "../context/AuthContext";
@@ -20,6 +20,7 @@ import { Badge } from "../components/ui/Badge";
 import { StatCard } from "../components/ui/StatCard";
 import { TableSkeleton, CardSkeleton, TextSkeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
+import { DetailSkeleton } from "../components/ui/DetailSkeleton";
 import { Modal } from "../components/ui/Modal";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { Input } from "../components/ui/Input";
@@ -65,10 +66,15 @@ export function MonitorDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
-  const { userRole, activeWorkspaceId } = useWorkspace();
+  const { userRole, activeWorkspaceId, workspaceError } = useWorkspace();
   const isViewer = userRole === "VIEWER";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Error from the last page load (kept separate from action errors so a failed
+  // "Check Now" doesn't replace the whole page with an error screen).
+  const [loadError, setLoadError] = useState("");
+  // Incremented on every load so responses from an older load are discarded.
+  const loadSeq = useRef(0);
   const [statusMessage, setStatusMessage] = useState("");
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [selectedMonitor, setSelectedMonitor] = useState<Monitor | null>(null);
@@ -109,10 +115,14 @@ export function MonitorDetailPage() {
   }, [id, token, activeWorkspaceId]);
 
   async function loadPage(currentToken: string, monitorId?: string) {
+    const seq = ++loadSeq.current;
+    const isStale = () => seq !== loadSeq.current;
     try {
       setBusy(true);
       setError("");
+      setLoadError("");
       const monitorData = await api.getMonitors(currentToken);
+      if (isStale()) return;
       setMonitors(monitorData);
 
       if (!monitorId) {
@@ -142,6 +152,7 @@ export function MonitorDetailPage() {
         api.getMonitorEvents(currentToken, target._id, 1, 8),
         api.getMonitorLogs(currentToken, target._id, 1, 30), // uptime strip + latency chart
       ]);
+      if (isStale()) return;
 
       setLogs(logRes.data);
       setChartLogs(chartRes.data);
@@ -150,9 +161,11 @@ export function MonitorDetailPage() {
       setTotalEventsPages(eventRes.pagination.pages);
       setAnalytics(analyticsData);
     } catch (err) {
+      if (isStale()) return;
       setError(getErrorMessage(err));
+      setLoadError(getErrorMessage(err));
     } finally {
-      setBusy(false);
+      if (!isStale()) setBusy(false);
     }
   }
 
@@ -653,16 +666,26 @@ export function MonitorDetailPage() {
 
   // Detail View Rendering
   const renderDetailView = () => {
-    if (!selectedMonitor) {
-      return (
-        <EmptyState
-          title="Monitor not found"
-          description="The requested API checker could not be found. Go back to directory list."
-          actionText="Back to console"
-          onAction={() => navigate("/monitors")}
-          icon={<AlertCircle className="w-8 h-8" />}
-        />
-      );
+    // Not loaded yet (or still showing the previous monitor while routing).
+    // A missing monitor redirects to /monitors in loadPage, so this is only
+    // ever "loading" or "the load failed".
+    if (!selectedMonitor || selectedMonitor._id !== id) {
+      const failure = loadError || workspaceError;
+      if (failure) {
+        return (
+          <EmptyState
+            title="Couldn't load this monitor"
+            description={failure}
+            actionText="Retry"
+            onAction={() => {
+              if (token && activeWorkspaceId) void loadPage(token, id);
+              else window.location.reload();
+            }}
+            icon={<AlertCircle className="w-8 h-8" />}
+          />
+        );
+      }
+      return <DetailSkeleton label="Loading monitor" />;
     }
 
     const detailActions = (
