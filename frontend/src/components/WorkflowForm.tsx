@@ -302,24 +302,27 @@ export function WorkflowForm({
         </label>
       </div>
 
-      {error && (
-        <div
-          role="alert"
-          className="p-3 text-xs font-semibold text-danger-700 bg-danger-50 dark:bg-danger-500/10 dark:text-danger-400 rounded-lg border border-danger-100 dark:border-danger-500/20"
-        >
-          {error}
+      {/* FOOTER: sticks to the bottom of the modal so the submit button (and any
+          save error) is always visible, however long the form is. */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 px-5 py-3 space-y-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+        {error && (
+          <div
+            role="alert"
+            className="p-3 text-xs font-semibold text-danger-700 bg-danger-50 dark:bg-danger-500/10 dark:text-danger-400 rounded-lg border border-danger-100 dark:border-danger-500/20"
+          >
+            {error}
+          </div>
+        )}
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="primary"
+            type="submit"
+            loading={busy}
+            className="w-full sm:w-auto text-xs"
+          >
+            {editing ? "Save Workflow" : "Create Automator"}
+          </Button>
         </div>
-      )}
-
-      <div className="flex justify-end gap-3 pt-3">
-        <Button
-          variant="primary"
-          type="submit"
-          loading={busy}
-          className="w-full sm:w-auto text-xs"
-        >
-          {editing ? "Save Workflow" : "Create Automator"}
-        </Button>
       </div>
     </form>
   );
