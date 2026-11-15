@@ -139,11 +139,18 @@ export function WorkflowDetailPage() {
           text: form.text,
         };
       } else if (form.actionType === "WEBHOOK") {
-        let headers = {};
+        let headers: unknown;
         try {
-          headers = JSON.parse(form.webhookHeadersJson || "{}");
+          headers = JSON.parse(form.webhookHeadersJson.trim() || "{}");
         } catch (e) {
-          throw new Error("Invalid custom headers JSON format. Please check JSON syntax.");
+          throw new Error(
+            'Custom HTTP Headers is not valid JSON. Use key/value pairs like { "Authorization": "Bearer xyz" }, or {} for none.'
+          );
+        }
+        if (!headers || typeof headers !== "object" || Array.isArray(headers)) {
+          throw new Error(
+            'Custom HTTP Headers must be a JSON object, e.g. { "Authorization": "Bearer xyz" }, or {} for none.'
+          );
         }
         actionConfig = {
           url: form.webhookUrl,
@@ -245,6 +252,7 @@ export function WorkflowDetailPage() {
     const isSlack = action?.type === "SLACK";
     const isTeams = action?.type === "TEAMS";
 
+    setError("");
     setEditingWorkflowId(selectedWorkflow._id);
     setForm({
       name: selectedWorkflow.name,
@@ -264,6 +272,7 @@ export function WorkflowDetailPage() {
   }
 
   function cancelEdit() {
+    setError("");
     setEditingWorkflowId("");
     setForm(emptyWorkflowForm);
     setIsAddModalOpen(false);
@@ -368,6 +377,7 @@ export function WorkflowDetailPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => {
+                  setError("");
                   setEditingWorkflowId("");
                   setForm(emptyWorkflowForm);
                   setIsAddModalOpen(true);
@@ -598,6 +608,7 @@ export function WorkflowDetailPage() {
             monitors={monitors}
             editing={Boolean(editingWorkflowId)}
             busy={busy}
+            error={error}
             onChange={setForm}
             onSubmit={handleSubmit}
             onCancel={cancelEdit}
@@ -882,6 +893,7 @@ export function WorkflowDetailPage() {
             monitors={monitors}
             editing={Boolean(editingWorkflowId)}
             busy={busy}
+            error={error}
             onChange={setForm}
             onSubmit={handleSubmit}
             onCancel={cancelEdit}
