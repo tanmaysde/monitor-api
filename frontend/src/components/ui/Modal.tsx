@@ -34,6 +34,16 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
+  // Stop the page behind the modal from scrolling while it is open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const sizes = {
@@ -46,22 +56,28 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 dark:bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300">
       <div
         ref={modalRef}
-        className={`w-full ${sizes[size]} bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        // Never taller than the viewport: the header stays put and the body scrolls.
+        className={`w-full ${sizes[size]} max-h-[calc(100dvh-2rem)] flex flex-col bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-850">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-850">
           {title ? (
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">{title}</h3>
           ) : (
             <div />
           )}
           <button
+            type="button"
+            aria-label="Close"
             onClick={onClose}
             className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="p-5 overflow-y-auto overscroll-contain">{children}</div>
       </div>
     </div>
   );

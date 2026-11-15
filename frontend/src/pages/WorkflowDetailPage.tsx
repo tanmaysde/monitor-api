@@ -614,7 +614,7 @@ export function WorkflowDetailPage() {
         )}
 
         {/* Add/Edit Modal */}
-        <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title="Modify Automation Template">
+        <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title={editingWorkflowId ? "Edit Workflow" : "New Workflow"}>
           <WorkflowForm
             form={form}
             monitors={monitors}
@@ -909,7 +909,7 @@ export function WorkflowDetailPage() {
         </div>
 
         {/* Modal edit form */}
-        <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title="Modify Automation Template">
+        <Modal isOpen={isAddModalOpen} onClose={cancelEdit} title={editingWorkflowId ? "Edit Workflow" : "New Workflow"}>
           <WorkflowForm
             form={form}
             monitors={monitors}
