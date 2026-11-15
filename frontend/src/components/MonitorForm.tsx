@@ -460,8 +460,8 @@ export function MonitorForm({
         )}
       </div>
 
-      {/* FOOTER */}
-      <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+      {/* FOOTER: sticks to the bottom of the modal so the submit button is always visible */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 px-5 py-3 flex justify-end gap-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
         <Button
           variant="primary"
           type="submit"
