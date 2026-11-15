@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { WorkflowForm } from "../components/WorkflowForm";
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ import { Badge } from "../components/ui/Badge";
 import { StatCard } from "../components/ui/StatCard";
 import { TableSkeleton, CardSkeleton, TextSkeleton } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/EmptyState";
+import { DetailSkeleton } from "../components/ui/DetailSkeleton";
 import { Modal } from "../components/ui/Modal";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import {
@@ -56,10 +57,14 @@ export function WorkflowDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
-  const { userRole, activeWorkspaceId } = useWorkspace();
+  const { userRole, activeWorkspaceId, workspaceError } = useWorkspace();
   const isViewer = userRole === "VIEWER";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Error from the last page load, separate from save/test errors.
+  const [loadError, setLoadError] = useState("");
+  // Incremented on every load so responses from an older load are discarded.
+  const loadSeq = useRef(0);
   const [statusMessage, setStatusMessage] = useState("");
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   // Monitors in this workspace, for the "Applies to monitors" picker and labels
@@ -88,13 +93,17 @@ export function WorkflowDetailPage() {
   }, [id, token, activeWorkspaceId]);
 
   async function loadPage(currentToken: string, workflowId?: string) {
+    const seq = ++loadSeq.current;
+    const isStale = () => seq !== loadSeq.current;
     try {
       setBusy(true);
       setError("");
+      setLoadError("");
       const [workflowData, monitorData] = await Promise.all([
         api.getWorkflows(currentToken),
         api.getMonitors(currentToken),
       ]);
+      if (isStale()) return;
       setWorkflows(workflowData);
       setMonitors(monitorData.map((m) => ({ _id: m._id, name: m.name })));
 
@@ -115,11 +124,14 @@ export function WorkflowDetailPage() {
       setSelectedWorkflow(target);
 
       const executionData = await api.getWorkflowExecutions(currentToken, target._id);
+      if (isStale()) return;
       setExecutions(executionData);
     } catch (err) {
+      if (isStale()) return;
       setError(getErrorMessage(err));
+      setLoadError(getErrorMessage(err));
     } finally {
-      setBusy(false);
+      if (!isStale()) setBusy(false);
     }
   }
 
@@ -648,16 +660,26 @@ export function WorkflowDetailPage() {
 
   // Detail view rendering
   const renderDetailView = () => {
-    if (!selectedWorkflow) {
-      return (
-        <EmptyState
-          title="Workflow not found"
-          description="The requested automation workflow could not be found."
-          actionText="Back to directory"
-          onAction={() => navigate("/workflows")}
-          icon={<AlertCircle className="w-8 h-8" />}
-        />
-      );
+    // Not loaded yet (or still showing the previous workflow while routing).
+    // A missing workflow redirects to /workflows in loadPage, so this is only
+    // ever "loading" or "the load failed".
+    if (!selectedWorkflow || selectedWorkflow._id !== id) {
+      const failure = loadError || workspaceError;
+      if (failure) {
+        return (
+          <EmptyState
+            title="Couldn't load this workflow"
+            description={failure}
+            actionText="Retry"
+            onAction={() => {
+              if (token && activeWorkspaceId) void loadPage(token, id);
+              else window.location.reload();
+            }}
+            icon={<AlertCircle className="w-8 h-8" />}
+          />
+        );
+      }
+      return <DetailSkeleton label="Loading workflow" />;
     }
 
     const detailActions = (
